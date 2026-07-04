@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
 
 export interface CalendarEvent {
   externalId: string;
@@ -13,28 +14,22 @@ export interface CalendarEvent {
 
 @Injectable()
 export class CalendarService {
-  getEvents(): CalendarEvent[] {
-    return [
-      {
-        externalId: 'gcal-001',
-        title: 'Security+ study block',
-        startTime: '2026-07-02T09:00:00.000Z',
-        endTime: '2026-07-02T11:00:00.000Z',
-        allDay: false,
-        isRecurring: true,
-        source: 'google_calendar',
-        lastSyncedAt: '2026-07-02T08:00:00.000Z',
-      },
-      {
-        externalId: 'gcal-002',
-        title: 'Team standup',
-        startTime: '2026-07-02T14:00:00.000Z',
-        endTime: '2026-07-02T14:30:00.000Z',
-        allDay: false,
-        isRecurring: true,
-        source: 'google_calendar',
-        lastSyncedAt: '2026-07-02T08:00:00.000Z',
-      },
-    ];
+  constructor(private readonly prisma: PrismaService) {}
+
+  async getEvents(): Promise<CalendarEvent[]> {
+    const events = await this.prisma.calendarEvent.findMany({
+      orderBy: { startTime: 'asc' },
+    });
+
+    return events.map((event) => ({
+      externalId: event.externalId,
+      title: event.title,
+      startTime: event.startTime.toISOString(),
+      endTime: event.endTime.toISOString(),
+      allDay: event.allDay,
+      isRecurring: event.isRecurring,
+      source: event.source,
+      lastSyncedAt: event.lastSyncedAt.toISOString(),
+    }));
   }
 }
