@@ -1,4 +1,14 @@
-import { Controller, Get, Logger, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpException,
+  HttpStatus,
+  Logger,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 import { CalendarService } from './calendar.service';
@@ -22,6 +32,28 @@ export class CalendarController {
     return this.calendarService.getEvents();
   }
 
+  @Post('calendar/sync')
+  async syncEvents() {
+    try {
+      return await this.calendarService.syncEvents();
+    } catch (error) {
+      const detail =
+        error instanceof Error ? error.message : 'Unknown sync error';
+      this.logger.error(
+        `Google Calendar sync failed: ${detail}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.BAD_GATEWAY,
+          message: 'Google Calendar sync failed',
+          error: detail,
+        },
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+  }
+
   @Get('calendar/auth')
   @UseGuards(GoogleAuthGuard)
   initiateGoogleAuth() {
@@ -29,7 +61,12 @@ export class CalendarController {
     // this body never runs.
   }
 
-  @Get('auth/google/callback')
+  // NOTE: This route is registered at /auth/google/callback rather than
+// /calendar/auth/callback (which the module's URL prefix would suggest).
+// This is intentional: the path must exactly match GOOGLE_REDIRECT_URI as
+// registered in Google Cloud Console (http://localhost:3000/auth/google/callback),
+// or Google's redirect will 404. See handoff notes, OAuth implementation task.
+  @Get('auth/google/callback') // or however the route decorator is currently written
   @UseGuards(AuthGuard('google'))
   async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
     const result = req.user as GoogleOAuthTokenResult;

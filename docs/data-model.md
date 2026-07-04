@@ -1,9 +1,10 @@
 # Data Model (Rough Draft)
 
 This is a rough entity/relationship sketch — enough to draw NestJS module
-boundaries around real nouns instead of guesses. No SQL or Prisma schema yet;
-that gets formalized at implementation time, once each phase actually needs
-its entities.
+boundaries around real nouns instead of guesses. `CalendarEvent`,
+`BriefingSnapshot`, and `CalendarOAuthToken` are now implemented as real
+Prisma models (Phase 1). The remaining entities below are still design-only —
+formalized in Prisma as each later phase actually needs them.
 
 **Non-goals for v1:** no multi-user modeling (single implicit user, no `User`
 table), no `Settings` table yet — configuration lives in `.env` until there's
@@ -67,6 +68,9 @@ can trigger writes to several pages; one page can draw on several sources —
 many-to-many with RawItem.
 - `title`, `concept`, `filePath`, `lastUpdatedAt`, `summary`
 
+### CalendarOAuthToken
+- `provider`, `accessToken`, `refreshToken`, `expiresAt`, `createdAt`
+
 ## Relationships
 
 ```mermaid
@@ -128,6 +132,12 @@ erDiagram
         string priorityType
         string referenceId
         int rank
+    }
+    CALENDAR_OAUTH_TOKEN {
+        string provider
+        string accessToken
+        string refreshToken
+        datetime expiresAt
     }
 ```
 
