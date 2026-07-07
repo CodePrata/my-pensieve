@@ -1,10 +1,14 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { BriefingService } from './briefing.service';
 import { PriorityCandidate } from './domain/priority-candidate.interface';
+import { FreeTimeCalculatorService } from './free-time/free-time-calculator.service';
 
 @Controller('briefing')
 export class BriefingController {
-  constructor(private readonly briefingService: BriefingService) {}
+  constructor(
+    private readonly briefingService: BriefingService,
+    private readonly freeTimeCalculatorService: FreeTimeCalculatorService,
+  ) {}
 
   @Get()
   getCurrentBriefing() {
@@ -17,5 +21,10 @@ export class BriefingController {
     // Candidates are supplied in the request body until StudyTopic/Project
     // models and their mapping layer exist.
     return this.briefingService.generatePriorities(body.candidates ?? []);
+  }
+
+  @Get('free-time')
+  getFreeTime() {
+    return this.freeTimeCalculatorService.calculateTodayFreeTime();
   }
 }

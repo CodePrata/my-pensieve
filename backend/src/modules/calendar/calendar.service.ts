@@ -366,4 +366,25 @@ export class CalendarService {
       lastSyncedAt: event.lastSyncedAt.toISOString(),
     }));
   }
+
+  async getEventsInRange(start: Date, end: Date): Promise<CalendarEvent[]> {
+    const events = await this.prisma.calendarEvent.findMany({
+      where: {
+        startTime: { lt: end },
+        endTime: { gt: start },
+      },
+      orderBy: { startTime: 'asc' },
+    });
+
+    return events.map((event) => ({
+      externalId: event.externalId,
+      title: event.title,
+      startTime: event.startTime.toISOString(),
+      endTime: event.endTime.toISOString(),
+      allDay: event.allDay,
+      isRecurring: event.isRecurring,
+      source: event.source,
+      lastSyncedAt: event.lastSyncedAt.toISOString(),
+    }));
+  }
 }

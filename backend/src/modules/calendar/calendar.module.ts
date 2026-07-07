@@ -17,5 +17,6 @@ import { GoogleOAuthStrategy } from './google-oauth.strategy';
   ],
   controllers: [CalendarController],
   providers: [CalendarService, GoogleOAuthStrategy, GoogleAuthGuard],
+  exports: [CalendarService],
 })
 export class CalendarModule {}
