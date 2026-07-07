@@ -23,6 +23,11 @@ export class BriefingController {
     return this.briefingService.generatePriorities(body.candidates ?? []);
   }
 
+  @Post('generate-full')
+  generateFullBriefing(@Body() body: { candidates?: PriorityCandidate[] }) {
+    return this.briefingService.generateFullBriefing(body.candidates ?? []);
+  }
+
   @Get('free-time')
   getFreeTime() {
     return this.freeTimeCalculatorService.calculateTodayFreeTime();

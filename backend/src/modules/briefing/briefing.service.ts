@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PriorityCandidate } from './domain/priority-candidate.interface';
+import { FreeTimeCalculatorService } from './free-time/free-time-calculator.service';
+import { BriefingNarrationService } from './narration/briefing-narration.service';
 import { PrioritizationEngineService } from './prioritization-engine.service';
 
 export interface BriefingPriority {
@@ -24,6 +26,8 @@ export class BriefingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly prioritizationEngine: PrioritizationEngineService,
+    private readonly freeTimeCalculatorService: FreeTimeCalculatorService,
+    private readonly briefingNarrationService: BriefingNarrationService,
   ) {}
 
   getCurrentBriefing(): BriefingSnapshot {
@@ -64,6 +68,51 @@ export class BriefingService {
         degradedReason: degraded
           ? 'No study or project data available'
           : null,
+        priorities: {
+          create: ranked.map(({ candidate, rank }) => ({
+            priorityType: candidate.type,
+            referenceId: candidate.id,
+            rank,
+          })),
+        },
+      },
+      include: {
+        priorities: {
+          orderBy: { rank: 'asc' },
+        },
+      },
+    });
+  }
+
+  async generateFullBriefing(candidates: PriorityCandidate[]) {
+    const now = new Date();
+    const prioritiesDegraded = candidates.length === 0;
+    const ranked = this.prioritizationEngine.rank(candidates);
+    const freeTimeResult =
+      await this.freeTimeCalculatorService.calculateTodayFreeTime();
+    const narrationResult = await this.briefingNarrationService.narrate(
+      candidates,
+      freeTimeResult,
+      now,
+    );
+
+    const degraded = prioritiesDegraded || narrationResult.degraded;
+    const degradedReasons: string[] = [];
+    if (prioritiesDegraded) {
+      degradedReasons.push('No study or project data available');
+    }
+    if (narrationResult.degraded && narrationResult.degradedReason) {
+      degradedReasons.push(narrationResult.degradedReason);
+    }
+
+    return this.prisma.briefingSnapshot.create({
+      data: {
+        date: startOfDay(now),
+        generatedAt: now,
+        degraded,
+        degradedReason:
+          degradedReasons.length > 0 ? degradedReasons.join(', ') : null,
+        narration: narrationResult.narration,
         priorities: {
           create: ranked.map(({ candidate, rank }) => ({
             priorityType: candidate.type,
