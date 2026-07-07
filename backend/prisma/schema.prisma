@@ -42,11 +42,22 @@ model CalendarOAuthToken {
 }
 
 model BriefingSnapshot {
-  id             String   @id @default(cuid())
-  date           DateTime @db.Date
+  id             String             @id @default(cuid())
+  date           DateTime           @db.Date
   generatedAt    DateTime
-  degraded       Boolean  @default(false)
+  degraded       Boolean            @default(false)
   degradedReason String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  priorities     BriefingPriority[]
+}
+
+model BriefingPriority {
+  id           String           @id @default(cuid())
+  snapshotId   String
+  snapshot     BriefingSnapshot @relation(fields: [snapshotId], references: [id])
+  priorityType String
+  referenceId  String
+  rank         Int
+  createdAt    DateTime         @default(now())
 }
