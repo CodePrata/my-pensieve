@@ -47,6 +47,7 @@ model BriefingSnapshot {
   generatedAt    DateTime
   degraded       Boolean            @default(false)
   degradedReason String?
+  narration      String?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   priorities     BriefingPriority[]
