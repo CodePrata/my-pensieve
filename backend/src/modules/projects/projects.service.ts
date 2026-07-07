@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Project as PrismaProject } from '../../../generated/prisma/client.js';
+import { PrismaService } from '../../prisma/prisma.service';
+import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
 
 export interface Project {
   id: string;
@@ -10,22 +14,79 @@ export interface Project {
 
 @Injectable()
 export class ProjectsService {
-  getProjects(): Project[] {
-    return [
-      {
-        id: 'proj-001',
-        name: 'My Pensieve',
-        repoUrl: 'https://github.com/example/my-pensieve',
-        status: 'active',
-        description: 'Personal knowledge and briefing dashboard.',
-      },
-      {
-        id: 'proj-002',
-        name: 'Capture Bot',
-        repoUrl: 'https://github.com/example/capture-bot',
-        status: 'paused',
-        description: 'Telegram listener for vault captures.',
-      },
-    ];
+  constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Lists projects oldest-first by creation time; `id` breaks ties so seeded
+   * proj-001 always precedes proj-002 when timestamps match.
+   */
+  async getProjects(): Promise<Project[]> {
+    const rows = await this.prisma.project.findMany({
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+
+    return rows.map(toProject);
   }
+
+  async getProjectById(id: string): Promise<Project | null> {
+    const row = await this.prisma.project.findUnique({ where: { id } });
+    return row ? toProject(row) : null;
+  }
+
+  async createProject(data: CreateProjectDto): Promise<Project> {
+    const row = await this.prisma.project.create({
+      data: {
+        name: data.name,
+        repoUrl: data.repoUrl,
+        status: data.status,
+        description: data.description ?? '',
+      },
+    });
+
+    return toProject(row);
+  }
+
+  async updateProject(id: string, data: UpdateProjectDto): Promise<Project> {
+    await this.ensureProjectExists(id);
+
+    const row = await this.prisma.project.update({
+      where: { id },
+      data: {
+        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.repoUrl !== undefined ? { repoUrl: data.repoUrl } : {}),
+        ...(data.status !== undefined ? { status: data.status } : {}),
+        ...(data.description !== undefined
+          ? { description: data.description }
+          : {}),
+      },
+    });
+
+    return toProject(row);
+  }
+
+  async deleteProject(id: string): Promise<void> {
+    await this.ensureProjectExists(id);
+    await this.prisma.project.delete({ where: { id } });
+  }
+
+  private async ensureProjectExists(id: string): Promise<void> {
+    const existing = await this.prisma.project.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`Project ${id} not found`);
+    }
+  }
+}
+
+function toProject(row: PrismaProject): Project {
+  return {
+    id: row.id,
+    name: row.name,
+    repoUrl: row.repoUrl,
+    status: row.status as Project['status'],
+    description: row.description ?? '',
+  };
 }
