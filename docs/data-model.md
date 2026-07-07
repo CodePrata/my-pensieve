@@ -2,9 +2,10 @@
 
 This is a rough entity/relationship sketch — enough to draw NestJS module
 boundaries around real nouns instead of guesses. `CalendarEvent`,
-`BriefingSnapshot`, and `CalendarOAuthToken` are now implemented as real
-Prisma models (Phase 1). The remaining entities below are still design-only —
-formalized in Prisma as each later phase actually needs them.
+`BriefingSnapshot`, `CalendarOAuthToken`, `StudyTopic`, and `Project` are
+now implemented as real Prisma models (Phase 1). The remaining entities
+below are still design-only — formalized in Prisma as each later phase
+actually needs them.
 
 **Non-goals for v1:** no multi-user modeling (single implicit user, no `User`
 table), no `Settings` table yet — configuration lives in `.env` until there's
@@ -33,18 +34,24 @@ Project), so the briefing doesn't need to embed full copies of either.
 - `rank`
 
 ### StudyTopic
-Manually entered (ADR-011) — no Moodle/syllabus scraping.
+Manually entered (ADR-011) — no Moodle/syllabus scraping. Full CRUD via
+`StudyModule`.
 - `name`, `examName` (e.g. "CompTIA Security+"), `domain` (e.g. "3.2")
 - `status` (`not_started` | `in_progress` | `done`), `deadline` (nullable)
 - `notes`
+- `importance` (`low` | `medium` | `high`, defaults to `medium`)
+- `estimatedDurationMinutes` (nullable — expected time to complete the topic)
 
 ### StudySession
 A logged study block against a topic.
 - `studyTopicId`, `date`, `durationMinutes`, `notes`
 
 ### Project
-A tracked coding project (Project Memory).
+A tracked coding project (Project Memory). Full CRUD via `ProjectsModule`.
 - `name`, `repoUrl`, `status` (`active` | `paused` | `done`), `description`
+- `importance` (`low` | `medium` | `high`, defaults to `medium`)
+- `dueDate` (nullable)
+- `estimatedDurationMinutes` (nullable — expected time to complete the project)
 
 ### ProjectSession
 One recorded coding session — the core of "resume where I left off."
@@ -94,6 +101,8 @@ erDiagram
         string domain
         string status
         date deadline
+        string importance
+        int estimatedDurationMinutes
     }
     STUDY_SESSION {
         date date
@@ -104,6 +113,9 @@ erDiagram
         string name
         string repoUrl
         string status
+        string importance
+        date dueDate
+        int estimatedDurationMinutes
     }
     PROJECT_SESSION {
         date date

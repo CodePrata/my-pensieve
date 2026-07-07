@@ -10,6 +10,9 @@ export interface Project {
   repoUrl: string;
   status: 'active' | 'paused' | 'done';
   description: string;
+  importance: 'low' | 'medium' | 'high';
+  dueDate: string | null;
+  estimatedDurationMinutes: number | null;
 }
 
 @Injectable()
@@ -40,6 +43,15 @@ export class ProjectsService {
         repoUrl: data.repoUrl,
         status: data.status,
         description: data.description ?? '',
+        ...(data.importance !== undefined
+          ? { importance: data.importance }
+          : {}),
+        ...(data.dueDate !== undefined
+          ? { dueDate: parseDateOnly(data.dueDate) }
+          : {}),
+        ...(data.estimatedDurationMinutes !== undefined
+          ? { estimatedDurationMinutes: data.estimatedDurationMinutes }
+          : {}),
       },
     });
 
@@ -57,6 +69,15 @@ export class ProjectsService {
         ...(data.status !== undefined ? { status: data.status } : {}),
         ...(data.description !== undefined
           ? { description: data.description }
+          : {}),
+        ...(data.importance !== undefined
+          ? { importance: data.importance }
+          : {}),
+        ...(data.dueDate !== undefined
+          ? { dueDate: parseDateOnly(data.dueDate) }
+          : {}),
+        ...(data.estimatedDurationMinutes !== undefined
+          ? { estimatedDurationMinutes: data.estimatedDurationMinutes }
           : {}),
       },
     });
@@ -88,5 +109,20 @@ function toProject(row: PrismaProject): Project {
     repoUrl: row.repoUrl,
     status: row.status as Project['status'],
     description: row.description ?? '',
+    importance: row.importance as Project['importance'],
+    dueDate: row.dueDate ? formatDateOnly(row.dueDate) : null,
+    estimatedDurationMinutes: row.estimatedDurationMinutes,
   };
+}
+
+function formatDateOnly(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+function parseDateOnly(value: string | null | undefined): Date | null {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  return new Date(`${value}T00:00:00.000Z`);
 }

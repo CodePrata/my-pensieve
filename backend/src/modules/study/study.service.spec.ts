@@ -24,6 +24,8 @@ describe('StudyService', () => {
     status: 'in_progress',
     deadline: new Date('2026-08-15T00:00:00.000Z'),
     notes: 'Review symmetric vs asymmetric encryption.',
+    importance: 'medium',
+    estimatedDurationMinutes: null,
     createdAt: new Date('2026-07-07T00:00:00.000Z'),
     updatedAt: new Date('2026-07-07T00:00:00.000Z'),
   };
@@ -59,6 +61,8 @@ describe('StudyService', () => {
           status: 'in_progress',
           deadline: '2026-08-15',
           notes: 'Review symmetric vs asymmetric encryption.',
+          importance: 'medium',
+          estimatedDurationMinutes: null,
         },
       ]);
     });
@@ -81,6 +85,8 @@ describe('StudyService', () => {
         status: 'in_progress',
         deadline: '2026-08-15',
         notes: 'Review symmetric vs asymmetric encryption.',
+        importance: 'medium',
+        estimatedDurationMinutes: null,
       });
     });
 
@@ -117,10 +123,62 @@ describe('StudyService', () => {
         },
       });
       expect(result.id).toBe('topic-001');
+      expect(result.importance).toBe('medium');
+      expect(result.estimatedDurationMinutes).toBeNull();
+    });
+
+    it('persists optional importance and estimatedDurationMinutes when provided', async () => {
+      prisma.studyTopic.create.mockResolvedValue({
+        ...prismaRow,
+        importance: 'high',
+        estimatedDurationMinutes: 90,
+      });
+
+      const result = await service.createTopic({
+        name: 'Cryptography basics',
+        examName: 'CompTIA Security+',
+        domain: '1.2',
+        status: 'in_progress',
+        importance: 'high',
+        estimatedDurationMinutes: 90,
+      });
+
+      expect(prisma.studyTopic.create).toHaveBeenCalledWith({
+        data: {
+          name: 'Cryptography basics',
+          examName: 'CompTIA Security+',
+          domain: '1.2',
+          status: 'in_progress',
+          deadline: null,
+          notes: '',
+          importance: 'high',
+          estimatedDurationMinutes: 90,
+        },
+      });
+      expect(result.importance).toBe('high');
+      expect(result.estimatedDurationMinutes).toBe(90);
     });
   });
 
   describe('updateTopic', () => {
+    it('updates importance when provided', async () => {
+      prisma.studyTopic.findUnique.mockResolvedValue({ id: 'topic-001' });
+      prisma.studyTopic.update.mockResolvedValue({
+        ...prismaRow,
+        importance: 'high',
+      });
+
+      const result = await service.updateTopic('topic-001', {
+        importance: 'high',
+      });
+
+      expect(prisma.studyTopic.update).toHaveBeenCalledWith({
+        where: { id: 'topic-001' },
+        data: { importance: 'high' },
+      });
+      expect(result.importance).toBe('high');
+    });
+
     it('updates a topic with the expected payload and returns mapped data', async () => {
       prisma.studyTopic.findUnique.mockResolvedValue({ id: 'topic-001' });
       prisma.studyTopic.update.mockResolvedValue({

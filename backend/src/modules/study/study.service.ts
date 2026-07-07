@@ -12,6 +12,8 @@ export interface StudyTopic {
   status: 'not_started' | 'in_progress' | 'done';
   deadline: string | null;
   notes: string;
+  importance: 'low' | 'medium' | 'high';
+  estimatedDurationMinutes: number | null;
 }
 
 @Injectable()
@@ -44,6 +46,12 @@ export class StudyService {
         status: data.status,
         deadline: parseDeadline(data.deadline),
         notes: data.notes ?? '',
+        ...(data.importance !== undefined
+          ? { importance: data.importance }
+          : {}),
+        ...(data.estimatedDurationMinutes !== undefined
+          ? { estimatedDurationMinutes: data.estimatedDurationMinutes }
+          : {}),
       },
     });
 
@@ -67,6 +75,12 @@ export class StudyService {
           ? { deadline: parseDeadline(data.deadline) }
           : {}),
         ...(data.notes !== undefined ? { notes: data.notes } : {}),
+        ...(data.importance !== undefined
+          ? { importance: data.importance }
+          : {}),
+        ...(data.estimatedDurationMinutes !== undefined
+          ? { estimatedDurationMinutes: data.estimatedDurationMinutes }
+          : {}),
       },
     });
 
@@ -99,6 +113,8 @@ function toStudyTopic(row: PrismaStudyTopic): StudyTopic {
     status: row.status as StudyTopic['status'],
     deadline: row.deadline ? formatDateOnly(row.deadline) : null,
     notes: row.notes ?? '',
+    importance: row.importance as StudyTopic['importance'],
+    estimatedDurationMinutes: row.estimatedDurationMinutes,
   };
 }
 

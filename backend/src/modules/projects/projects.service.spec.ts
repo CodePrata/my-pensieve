@@ -22,6 +22,9 @@ describe('ProjectsService', () => {
     repoUrl: 'https://github.com/example/my-pensieve',
     status: 'active',
     description: 'Personal knowledge and briefing dashboard.',
+    importance: 'medium',
+    dueDate: null,
+    estimatedDurationMinutes: null,
     createdAt: new Date('2026-07-07T00:00:00.000Z'),
     updatedAt: new Date('2026-07-07T00:00:00.000Z'),
   };
@@ -55,6 +58,9 @@ describe('ProjectsService', () => {
           repoUrl: 'https://github.com/example/my-pensieve',
           status: 'active',
           description: 'Personal knowledge and briefing dashboard.',
+          importance: 'medium',
+          dueDate: null,
+          estimatedDurationMinutes: null,
         },
       ]);
     });
@@ -75,6 +81,9 @@ describe('ProjectsService', () => {
         repoUrl: 'https://github.com/example/my-pensieve',
         status: 'active',
         description: 'Personal knowledge and briefing dashboard.',
+        importance: 'medium',
+        dueDate: null,
+        estimatedDurationMinutes: null,
       });
     });
 
@@ -107,10 +116,64 @@ describe('ProjectsService', () => {
         },
       });
       expect(result.id).toBe('proj-001');
+      expect(result.importance).toBe('medium');
+      expect(result.dueDate).toBeNull();
+      expect(result.estimatedDurationMinutes).toBeNull();
+    });
+
+    it('persists optional importance, dueDate, and estimatedDurationMinutes when provided', async () => {
+      prisma.project.create.mockResolvedValue({
+        ...prismaRow,
+        importance: 'high',
+        dueDate: new Date('2026-09-01T00:00:00.000Z'),
+        estimatedDurationMinutes: 120,
+      });
+
+      const result = await service.createProject({
+        name: 'My Pensieve',
+        repoUrl: 'https://github.com/example/my-pensieve',
+        status: 'active',
+        importance: 'high',
+        dueDate: '2026-09-01',
+        estimatedDurationMinutes: 120,
+      });
+
+      expect(prisma.project.create).toHaveBeenCalledWith({
+        data: {
+          name: 'My Pensieve',
+          repoUrl: 'https://github.com/example/my-pensieve',
+          status: 'active',
+          description: '',
+          importance: 'high',
+          dueDate: new Date('2026-09-01T00:00:00.000Z'),
+          estimatedDurationMinutes: 120,
+        },
+      });
+      expect(result.importance).toBe('high');
+      expect(result.dueDate).toBe('2026-09-01');
+      expect(result.estimatedDurationMinutes).toBe(120);
     });
   });
 
   describe('updateProject', () => {
+    it('updates importance when provided', async () => {
+      prisma.project.findUnique.mockResolvedValue({ id: 'proj-001' });
+      prisma.project.update.mockResolvedValue({
+        ...prismaRow,
+        importance: 'high',
+      });
+
+      const result = await service.updateProject('proj-001', {
+        importance: 'high',
+      });
+
+      expect(prisma.project.update).toHaveBeenCalledWith({
+        where: { id: 'proj-001' },
+        data: { importance: 'high' },
+      });
+      expect(result.importance).toBe('high');
+    });
+
     it('updates a project with the expected payload and returns mapped data', async () => {
       prisma.project.findUnique.mockResolvedValue({ id: 'proj-001' });
       prisma.project.update.mockResolvedValue({
