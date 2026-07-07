@@ -70,6 +70,25 @@ later batch sources like GitHub and YouTube (ADR-014) — and turns it into
 `wiki/` pages and queryable Postgres records, on the same on-demand schedule
 as everything else in the backend.
 
+## How on-demand sync actually triggers
+
+The Dashboard doesn't just read whatever's already in Postgres — opening it
+is the trigger event itself. On page load, the frontend calls
+`POST /calendar/sync` first (fetching fresh data from Google Calendar and
+upserting into `CalendarEvent`), then `GET /calendar/events` to render.
+This is the concrete mechanism behind ADR-003's on-demand philosophy for
+Calendar specifically: there is no scheduler, no cron, no background sync —
+freshness is tied entirely to the moment the user looks at the dashboard.
+
+If the sync call fails (expired/revoked token, Google API error, network
+issue), the dashboard falls back to whatever was already synced rather than
+blocking or crashing (ADR-010) — the user sees a clear "couldn't refresh"
+indicator alongside the last known data, not a blank screen.
+
+This same on-open-triggers-refresh pattern is the expected default for any
+future on-demand section (Study, Projects, Knowledge Inbox) unless a specific
+section has a reason to behave differently.
+
 ## Deferred, on purpose
 
 - **Qdrant** — until Phase 4 has real content to search (ADR-004).
