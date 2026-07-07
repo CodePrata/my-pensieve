@@ -54,7 +54,7 @@ export function BriefingSection() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 pt-2">
-        <p className="font-serif text-xl leading-relaxed text-foreground">
+        <p className="whitespace-pre-line font-serif text-xl leading-relaxed text-foreground">
           {briefing.narration}
         </p>
         <ol className="list-inside list-decimal space-y-2 font-sans text-sm text-foreground/90">
