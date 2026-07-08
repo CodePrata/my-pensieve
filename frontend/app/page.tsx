@@ -6,8 +6,8 @@ import { StudySection } from "@/components/dashboard/study-section";
 
 export default function DashboardPage() {
   return (
-    <div className="min-h-full bg-primary">
-      <header className="border-b border-primary/80 bg-primary">
+    <div className="min-h-full" style={{ backgroundColor: "#1A7DA4" }}>
+      <header className="border-b border-primary/80">
         <div className="mx-auto max-w-6xl px-6 py-5">
           <h1 className="text-xl font-medium tracking-tight text-primary-foreground">
             My Pensieve
