@@ -1,12 +1,13 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get, Post } from '@nestjs/common';
 import { BriefingService } from './briefing.service';
-import { PriorityCandidate } from './domain/priority-candidate.interface';
+import { CandidateAggregatorService } from './domain/candidate-aggregator.service';
 import { FreeTimeCalculatorService } from './free-time/free-time-calculator.service';
 
 @Controller('briefing')
 export class BriefingController {
   constructor(
     private readonly briefingService: BriefingService,
+    private readonly candidateAggregator: CandidateAggregatorService,
     private readonly freeTimeCalculatorService: FreeTimeCalculatorService,
   ) {}
 
@@ -16,16 +17,15 @@ export class BriefingController {
   }
 
   @Post('generate')
-  generatePriorities(@Body() body: { candidates?: PriorityCandidate[] }) {
-    // Temporary testing shim — not the permanent API contract.
-    // Candidates are supplied in the request body until StudyTopic/Project
-    // models and their mapping layer exist.
-    return this.briefingService.generatePriorities(body.candidates ?? []);
+  async generatePriorities() {
+    const candidates = await this.candidateAggregator.getCandidates();
+    return this.briefingService.generatePriorities(candidates);
   }
 
   @Post('generate-full')
-  generateFullBriefing(@Body() body: { candidates?: PriorityCandidate[] }) {
-    return this.briefingService.generateFullBriefing(body.candidates ?? []);
+  async generateFullBriefing() {
+    const candidates = await this.candidateAggregator.getCandidates();
+    return this.briefingService.generateFullBriefing(candidates);
   }
 
   @Get('free-time')

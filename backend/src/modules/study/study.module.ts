@@ -7,5 +7,6 @@ import { StudyService } from './study.service';
   imports: [PrismaModule],
   controllers: [StudyController],
   providers: [StudyService],
+  exports: [StudyService],
 })
 export class StudyModule {}
