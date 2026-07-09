@@ -43,6 +43,10 @@ model CalendarOAuthToken {
 
 model BriefingSnapshot {
   id             String             @id @default(cuid())
+  // `date` reflects server-LOCAL midnight (per ADR-003's single-machine
+  // assumption), not UTC. Querying with Postgres's CURRENT_DATE will not
+  // match rows generated after local midnight but before UTC midnight —
+  // always compare against a locally-derived startOfDay(), not CURRENT_DATE.
   date           DateTime           @db.Date
   generatedAt    DateTime
   degraded       Boolean            @default(false)
