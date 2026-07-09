@@ -18,8 +18,8 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/projects`,
       },
       {
-        source: "/briefing",
-        destination: `${backendUrl}/briefing`,
+        source: "/briefing/:path*",
+        destination: `${backendUrl}/briefing/:path*`,
       },
       {
         source: "/knowledge/:path*",

@@ -58,3 +58,54 @@ export interface RawItem {
   capturedAt: string;
   processed: boolean;
 }
+
+export interface HydratedPriorityBase {
+  id: string;
+  title: string;
+  dueDate: string | null;
+  importance: "low" | "medium" | "high";
+  status: string;
+  estimatedDurationMinutes: number | null;
+  rank: number;
+}
+
+export interface HydratedStudyCandidate extends HydratedPriorityBase {
+  type: "study_topic";
+  examName?: string;
+  masteryLevel?: number;
+}
+
+export interface HydratedProjectCandidate extends HydratedPriorityBase {
+  type: "project";
+  milestones?: string[];
+  blockers?: string[];
+}
+
+export type HydratedPriority =
+  | HydratedStudyCandidate
+  | HydratedProjectCandidate;
+
+export interface FreeWindow {
+  start: string;
+  end: string;
+  durationMinutes: number;
+}
+
+export interface FreeTimeResult {
+  windows: FreeWindow[];
+  totalFreeMinutes: number;
+  largestWindowMinutes: number;
+  windowCount: number;
+}
+
+export interface LiveBriefingData {
+  priorities: HydratedPriority[];
+  freeTime: FreeTimeResult;
+}
+
+export interface LiveNarrationResult {
+  narration: string;
+  degraded: boolean;
+  degradedReason: string | null;
+  generatedAt: string;
+}
