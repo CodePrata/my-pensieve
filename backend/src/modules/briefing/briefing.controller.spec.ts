@@ -49,11 +49,12 @@ describe('BriefingController', () => {
 
   describe('GET /briefing/live-data', () => {
     it('returns fully hydrated priority candidates with rank and free time', async () => {
+      const today = startOfDay(new Date());
       const studyCandidate = {
         id: 'topic-1',
         type: 'study_topic' as const,
         title: 'Cryptography basics',
-        dueDate: new Date('2026-08-15'),
+        dueDate: addDays(today, 1),
         importance: 'high' as const,
         status: 'in_progress',
         estimatedDurationMinutes: 60,
@@ -63,7 +64,7 @@ describe('BriefingController', () => {
         id: 'proj-1',
         type: 'project' as const,
         title: 'My Pensieve',
-        dueDate: new Date('2026-07-10'),
+        dueDate: addDays(today, 30),
         importance: 'medium' as const,
         status: 'active',
         estimatedDurationMinutes: 45,
@@ -115,3 +116,15 @@ describe('BriefingController', () => {
     });
   });
 });
+
+function startOfDay(date: Date): Date {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}

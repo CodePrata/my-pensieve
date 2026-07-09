@@ -88,10 +88,11 @@ export class BriefingService {
     const now = new Date();
     const prioritiesDegraded = candidates.length === 0;
     const ranked = this.prioritizationEngine.rank(candidates);
+    const rankedCandidates = ranked.map(({ candidate }) => candidate);
     const freeTimeResult =
       await this.freeTimeCalculatorService.calculateTodayFreeTime();
     const narrationResult = await this.briefingNarrationService.narrate(
-      candidates,
+      rankedCandidates,
       freeTimeResult,
       now,
     );
