@@ -53,6 +53,66 @@ describe('buildOllamaPrompt', () => {
     expect(prompt).toContain('"totalFreeMinutes": 120');
   });
 
+  it('places the focus-line instruction last, after input data', () => {
+    const prompt = buildOllamaPrompt(
+      candidates,
+      freeTimeResult,
+      morning,
+      'Alex',
+    );
+
+    const inputDataIndex = prompt.indexOf('Input data:');
+    const focusInstructionIndex = prompt.indexOf('FINAL INSTRUCTION — Focus line');
+    expect(inputDataIndex).toBeGreaterThan(-1);
+    expect(focusInstructionIndex).toBeGreaterThan(inputDataIndex);
+    expect(prompt.trimEnd().endsWith('Now generate the briefing.')).toBe(true);
+  });
+
+  it('warns against generic focus lines when candidates are present', () => {
+    const prompt = buildOllamaPrompt(
+      candidates,
+      freeTimeResult,
+      morning,
+      'Alex',
+    );
+
+    expect(prompt).toContain('The candidates list is NOT empty');
+    expect(prompt).toContain(
+      'Do NOT write a generic phrase like "Study and Projects"',
+    );
+    expect(prompt).toContain(
+      'Do NOT use the empty-candidates phrasing',
+    );
+    expect(prompt).toContain('it is NOT empty here');
+    expect(prompt).toContain('candidates[0].title is "First"');
+    expect(prompt).toContain(
+      'Your primary focus should be on First.',
+    );
+  });
+
+  it('includes a worked example with a placeholder title', () => {
+    const prompt = buildOllamaPrompt(
+      candidates,
+      freeTimeResult,
+      morning,
+      'Alex',
+    );
+
+    expect(prompt).toContain(
+      'Worked example: If the top candidate\'s title is "Example Task Name", the last line must be exactly: "Your primary focus should be on Example Task Name."',
+    );
+  });
+
+  it('uses empty-candidates focus instruction when no candidates exist', () => {
+    const prompt = buildOllamaPrompt([], emptyFreeTime(0), morning, 'Alex');
+
+    expect(prompt).toContain('The candidates list IS empty');
+    expect(prompt).toContain(
+      "Your primary focus should be on getting Study and Projects data flowing — nothing's tracked there yet.",
+    );
+    expect(prompt).not.toContain('it is NOT empty here');
+  });
+
   it('derives timeOfDay from the passed now parameter', () => {
     const afternoon = new Date(2026, 6, 7, 14, 0);
     const evening = new Date(2026, 6, 7, 19, 0);

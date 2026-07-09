@@ -38,6 +38,23 @@ export function deriveTimeOfDay(now: Date): TimeOfDay {
   return 'Evening';
 }
 
+function buildFocusLineInstruction(candidates: PriorityCandidate[]): string {
+  if (candidates.length === 0) {
+    return `FINAL INSTRUCTION — Focus line (write this as the very last line of your output):
+The candidates list IS empty. Use the empty-candidates focus phrasing exactly:
+"Your primary focus should be on getting Study and Projects data flowing — nothing's tracked there yet."
+Now generate the briefing.`;
+  }
+
+  const topTitle = candidates[0].title;
+  return `FINAL INSTRUCTION — Focus line (write this as the very last line of your output):
+The candidates list is NOT empty (${candidates.length} candidates provided). Do NOT write a generic phrase like "Study and Projects" or a summary of the categories. Do NOT use the empty-candidates phrasing ("Your primary focus should be on getting Study and Projects data flowing — nothing's tracked there yet.") unless the candidates list is genuinely empty — it is NOT empty here.
+The last line must name candidates[0].title exactly. For this input, candidates[0].title is "${topTitle}".
+Worked example: If the top candidate's title is "Example Task Name", the last line must be exactly: "Your primary focus should be on Example Task Name."
+For this input, the last line must be exactly: "Your primary focus should be on ${topTitle}."
+Now generate the briefing.`;
+}
+
 export function buildOllamaPrompt(
   candidates: PriorityCandidate[],
   freeTimeResult: FreeTimeResult,
@@ -51,7 +68,7 @@ export function buildOllamaPrompt(
     2,
   );
 
-  return `${SYSTEM_PROMPT}\n\nInput data:\n${inputData}`;
+  return `${SYSTEM_PROMPT}\n\nInput data:\n${inputData}\n\n${buildFocusLineInstruction(candidates)}`;
 }
 
 export function isWellFormedNarration(text: string): boolean {
