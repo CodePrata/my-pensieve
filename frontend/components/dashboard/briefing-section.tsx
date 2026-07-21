@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatFreeTime } from "@/lib/format-free-time";
 import type { LiveBriefingData, LiveNarrationResult } from "@/lib/types";
 
 const briefingCardClassName =
@@ -184,7 +185,8 @@ export function BriefingSection() {
           ) : liveData ? (
             <>
               <p className="font-sans text-sm text-muted-foreground">
-                {liveData.freeTime.totalFreeMinutes} minutes of free time today
+                {formatFreeTime(liveData.freeTime.totalFreeMinutes)} of free time
+                today
               </p>
               {liveData.priorities.length > 0 ? (
                 <ol className="list-inside list-decimal space-y-2 font-sans text-sm text-foreground/90">
