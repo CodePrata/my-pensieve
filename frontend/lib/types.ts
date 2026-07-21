@@ -23,6 +23,8 @@ export interface StudyTopic {
   status: "not_started" | "in_progress" | "done";
   deadline: string | null;
   notes: string;
+  importance: "low" | "medium" | "high";
+  estimatedDurationMinutes: number | null;
 }
 
 export interface Project {
@@ -31,6 +33,9 @@ export interface Project {
   repoUrl: string;
   status: "active" | "paused" | "done";
   description: string;
+  importance: "low" | "medium" | "high";
+  dueDate: string | null;
+  estimatedDurationMinutes: number | null;
 }
 
 export interface BriefingPriority {

@@ -9,7 +9,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatDisplayDate } from "@/lib/format-date";
 import type { StudyTopic } from "@/lib/types";
+
+const importanceBadgeVariant: Record<
+  StudyTopic["importance"],
+  "destructive" | "outline" | "ghost"
+> = {
+  high: "destructive",
+  medium: "outline",
+  low: "outline",
+};
 
 export function StudySection() {
   const [topics, setTopics] = useState<StudyTopic[]>([]);
@@ -39,11 +49,19 @@ export function StudySection() {
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-medium">{topic.name}</p>
-                <Badge variant="outline">{topic.status.replace("_", " ")}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={importanceBadgeVariant[topic.importance]}>
+                    {topic.importance}
+                  </Badge>
+                  <Badge variant="outline">{topic.status.replace("_", " ")}</Badge>
+                </div>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
                 {topic.examName} · domain {topic.domain}
-                {topic.deadline ? ` · due ${topic.deadline}` : ""}
+                {topic.deadline ? ` · due ${formatDisplayDate(topic.deadline)}` : ""}
+                {topic.estimatedDurationMinutes !== null
+                  ? ` · ~${topic.estimatedDurationMinutes} min`
+                  : ""}
               </p>
               {topic.notes && (
                 <p className="mt-2 text-sm">{topic.notes}</p>

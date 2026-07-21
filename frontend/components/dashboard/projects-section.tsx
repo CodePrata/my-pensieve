@@ -9,7 +9,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatDisplayDate } from "@/lib/format-date";
 import type { Project } from "@/lib/types";
+
+const importanceBadgeVariant: Record<
+  Project["importance"],
+  "destructive" | "outline" | "ghost"
+> = {
+  high: "destructive",
+  medium: "outline",
+  low: "outline",
+};
 
 export function ProjectsSection() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -39,10 +49,19 @@ export function ProjectsSection() {
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-medium">{project.name}</p>
-                <Badge variant="outline">{project.status}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={importanceBadgeVariant[project.importance]}>
+                    {project.importance}
+                  </Badge>
+                  <Badge variant="outline">{project.status}</Badge>
+                </div>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
                 {project.description}
+                {project.dueDate ? ` · due ${formatDisplayDate(project.dueDate)}` : ""}
+                {project.estimatedDurationMinutes !== null
+                  ? ` · ~${project.estimatedDurationMinutes} min`
+                  : ""}
               </p>
               <a
                 href={project.repoUrl}
