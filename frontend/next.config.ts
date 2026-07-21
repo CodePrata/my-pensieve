@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
-const backendUrl = process.env.BACKEND_URL ?? "http://localhost:3000";
+/** Prefer IPv4 loopback — Node may resolve `localhost` to ::1 while NestJS listens on 127.0.0.1 only. */
+function resolveBackendUrl(): string {
+  const raw = process.env.BACKEND_URL ?? "http://127.0.0.1:3000";
+  return raw.replace(/^http:\/\/localhost(?=[:/]|$)/i, "http://127.0.0.1");
+}
+
+const backendUrl = resolveBackendUrl();
 
 const nextConfig: NextConfig = {
   async rewrites() {

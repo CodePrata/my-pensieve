@@ -1,6 +1,6 @@
 # ADR-009: General-Purpose, Capture-Only Telegram Capture Bot
 
-**Status:** Accepted
+**Status:** Superseded by ADR-018
 **Date:** 2026-07-01
 
 ## Context

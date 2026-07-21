@@ -1,5 +1,4 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { CalendarAuthExpiredError } from './calendar-auth-expired.error';
 import { CalendarController } from './calendar.controller';
 import { CalendarService } from './calendar.service';
@@ -7,19 +6,14 @@ import { CalendarService } from './calendar.service';
 describe('CalendarController', () => {
   let controller: CalendarController;
   let calendarService: jest.Mocked<Pick<CalendarService, 'syncEvents'>>;
-  let configService: jest.Mocked<Pick<ConfigService, 'get'>>;
 
   beforeEach(() => {
     calendarService = {
       syncEvents: jest.fn(),
     };
-    configService = {
-      get: jest.fn((key: string) => (key === 'PORT' ? '3000' : undefined)),
-    };
 
     controller = new CalendarController(
       calendarService as unknown as CalendarService,
-      configService as unknown as ConfigService,
     );
   });
 
@@ -36,7 +30,7 @@ describe('CalendarController', () => {
           message: 'Google Calendar sync failed',
           errorType: 'auth_expired',
           error: 'Google Calendar authorization expired or revoked',
-          reauthUrl: 'http://localhost:3000/calendar/auth',
+          reauthUrl: '/calendar/auth',
         },
       });
     });

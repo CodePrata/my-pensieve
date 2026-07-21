@@ -9,7 +9,6 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 import { CalendarAuthExpiredError } from './calendar-auth-expired.error';
@@ -27,10 +26,7 @@ import { GoogleOAuthTokenResult } from './google-oauth.strategy';
 export class CalendarController {
   private readonly logger = new Logger(CalendarController.name);
 
-  constructor(
-    private readonly calendarService: CalendarService,
-    private readonly configService: ConfigService,
-  ) {}
+  constructor(private readonly calendarService: CalendarService) {}
 
   @Get('calendar/events')
   getEvents() {
@@ -49,8 +45,8 @@ export class CalendarController {
         error instanceof Error ? error.stack : undefined,
       );
       if (error instanceof CalendarAuthExpiredError) {
-        const port = this.configService.get<string>('PORT') ?? '3000';
-        const reauthUrl = `http://localhost:${port}/calendar/auth`;
+        // Relative path so the frontend proxy handles it (avoids localhost/IPv6 issues).
+        const reauthUrl = '/calendar/auth';
         throw new HttpException(
           {
             statusCode: HttpStatus.UNAUTHORIZED,
