@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from '../../prisma/prisma.module';
+import { OllamaModule } from '../ollama/ollama.module';
 import { ProjectsModule } from '../projects/projects.module';
 import { StudyModule } from '../study/study.module';
 import { BriefingController } from './briefing.controller';
@@ -14,6 +15,7 @@ import { PrioritizationEngineService } from './prioritization-engine.service';
 @Module({
   imports: [
     PrismaModule,
+    OllamaModule,
     FreeTimeModule,
     StudyModule,
     ProjectsModule,

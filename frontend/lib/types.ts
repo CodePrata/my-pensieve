@@ -64,6 +64,22 @@ export interface RawItem {
   processed: boolean;
 }
 
+export interface SyncRawItemsResult {
+  created: number;
+  skipped: number;
+}
+
+export interface ProcessInboxFailure {
+  rawItemId: string;
+  reason: string;
+}
+
+export interface ProcessInboxResult {
+  processed: number;
+  failed: number;
+  failures: ProcessInboxFailure[];
+}
+
 export interface HydratedPriorityBase {
   id: string;
   title: string;

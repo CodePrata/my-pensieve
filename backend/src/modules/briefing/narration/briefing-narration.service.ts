@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { OllamaClientService } from '../../ollama/ollama-client.service';
 import { PriorityCandidate } from '../domain/priority-candidate.interface';
 import { FreeTimeResult } from '../free-time/free-time.interface';
 import {
@@ -9,18 +10,10 @@ import {
   isWellFormedNarration,
 } from './narration-template';
 
-const OLLAMA_GENERATE_URL = 'http://localhost:11434/api/generate';
-const OLLAMA_MODEL = 'qwen2.5:7b-instruct';
-const OLLAMA_TIMEOUT_MS = 15_000;
-
 const MALFORMED_REASON = 'Narration output malformed — used fallback';
 const INACCURATE_REASON = 'Narration content inaccurate — used fallback';
 const UNAVAILABLE_REASON =
   'Narration unavailable — Ollama unreachable or timed out';
-
-interface OllamaGenerateResponse {
-  response: string;
-}
 
 export interface NarrationResult {
   narration: string;
@@ -32,7 +25,10 @@ export interface NarrationResult {
 export class BriefingNarrationService {
   private readonly logger = new Logger(BriefingNarrationService.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly ollamaClient: OllamaClientService,
+  ) {}
 
   async narrate(
     candidates: PriorityCandidate[],
@@ -48,7 +44,7 @@ export class BriefingNarrationService {
     );
 
     try {
-      const ollamaText = await this.callOllama(prompt);
+      const ollamaText = await this.ollamaClient.generate(prompt);
       if (!isWellFormedNarration(ollamaText)) {
         this.logger.warn('Ollama narration failed structural validation');
         return {
@@ -96,36 +92,6 @@ export class BriefingNarrationService {
         degraded: true,
         degradedReason: UNAVAILABLE_REASON,
       };
-    }
-  }
-
-  private async callOllama(prompt: string): Promise<string> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
-
-    try {
-      const response = await fetch(OLLAMA_GENERATE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: OLLAMA_MODEL,
-          prompt,
-          stream: false,
-        }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const body = await response.text();
-        throw new Error(
-          `Ollama request failed: ${response.status} ${body}`,
-        );
-      }
-
-      const data = (await response.json()) as OllamaGenerateResponse;
-      return data.response.trim();
-    } finally {
-      clearTimeout(timeoutId);
     }
   }
 }

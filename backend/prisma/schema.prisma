@@ -102,3 +102,39 @@ model Project {
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 }
+
+model RawItem {
+  id            String           @id @default(cuid())
+  sourceType    String
+  captureMethod String
+  sourceUrl     String?
+  rawFilePath   String           @unique
+  capturedAt    DateTime
+  processed     Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  wikiSources   WikiPageSource[]
+}
+
+model WikiPage {
+  id            String           @id @default(cuid())
+  title         String
+  concept       String?
+  filePath      String           @unique
+  summary       String?
+  lastUpdatedAt DateTime
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  rawSources    WikiPageSource[]
+}
+
+model WikiPageSource {
+  id         String   @id @default(cuid())
+  rawItemId  String
+  rawItem    RawItem  @relation(fields: [rawItemId], references: [id])
+  wikiPageId String
+  wikiPage   WikiPage @relation(fields: [wikiPageId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([rawItemId, wikiPageId])
+}
