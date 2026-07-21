@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { calendar_v3, google } from 'googleapis';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CalendarAuthExpiredError } from './calendar-auth-expired.error';
 import { GoogleOAuthTokenResult } from './google-oauth.strategy';
 
 export interface CalendarEvent {
@@ -124,6 +125,15 @@ export class CalendarService {
 
     if (!response.ok) {
       const body = await response.text();
+      let parsed: { error?: string } | undefined;
+      try {
+        parsed = JSON.parse(body) as { error?: string };
+      } catch {
+        // Non-JSON body — treat as a transient refresh failure.
+      }
+      if (parsed?.error === 'invalid_grant') {
+        throw new CalendarAuthExpiredError();
+      }
       throw new Error(
         `Failed to refresh Google access token: ${response.status} ${body}`,
       );

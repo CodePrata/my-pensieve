@@ -9,8 +9,10 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
+import { CalendarAuthExpiredError } from './calendar-auth-expired.error';
 import { CalendarService } from './calendar.service';
 import { GoogleAuthGuard } from './google-auth.guard';
 import { GoogleOAuthTokenResult } from './google-oauth.strategy';
@@ -25,7 +27,10 @@ import { GoogleOAuthTokenResult } from './google-oauth.strategy';
 export class CalendarController {
   private readonly logger = new Logger(CalendarController.name);
 
-  constructor(private readonly calendarService: CalendarService) {}
+  constructor(
+    private readonly calendarService: CalendarService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Get('calendar/events')
   getEvents() {
@@ -43,10 +48,26 @@ export class CalendarController {
         `Google Calendar sync failed: ${detail}`,
         error instanceof Error ? error.stack : undefined,
       );
+      if (error instanceof CalendarAuthExpiredError) {
+        const port = this.configService.get<string>('PORT') ?? '3000';
+        const reauthUrl = `http://localhost:${port}/calendar/auth`;
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.UNAUTHORIZED,
+            message: 'Google Calendar sync failed',
+            errorType: 'auth_expired',
+            error: detail,
+            reauthUrl,
+          },
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
       throw new HttpException(
         {
           statusCode: HttpStatus.BAD_GATEWAY,
           message: 'Google Calendar sync failed',
+          errorType: 'transient',
           error: detail,
         },
         HttpStatus.BAD_GATEWAY,
