@@ -89,6 +89,32 @@ This same on-open-triggers-refresh pattern is the expected default for any
 future on-demand section (Study, Projects, Knowledge Inbox) unless a specific
 section has a reason to behave differently.
 
+## Error Handling Conventions
+
+Endpoints that call external services (Google Calendar, Ollama) distinguish
+failure types rather than returning a generic error. Calendar sync example:
+
+- `{ errorType: 'transient', message, error }` — network/API failure,
+  502. No user action implied beyond retry.
+- `{ errorType: 'auth_expired', message, error, reauthUrl }` — 401,
+  expired/revoked OAuth grant. `reauthUrl` is an absolute backend-origin
+  URL (not relative), since consuming clients may open it in a new
+  browser tab outside the Next.js rewrite proxy.
+
+Custom error classes for this (e.g. `CalendarAuthExpiredError`) are
+co-located within the owning module, thrown only on a specifically
+identified failure signature — never as a catch-all.
+
+## Mixed-Latency Endpoints
+
+Any section with a fast deterministic part and a slow LLM-dependent part
+splits into two endpoints rather than one endpoint with unpredictable
+response time: a fast always-live endpoint for the deterministic data,
+and a separately-cached slow endpoint for the generated part, fetched
+independently by the frontend (no `Promise.all`). Established by the
+Briefing Generator (`live-data` / `live-narration`); reuse for Knowledge
+Inbox or any future LLM-touching section.
+
 ## Deferred, on purpose
 
 - **Qdrant** — until Phase 4 has real content to search (ADR-004).

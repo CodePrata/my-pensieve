@@ -19,6 +19,11 @@ Synced from Google Calendar. Read-mostly; not the system's source of truth
 - `externalId`, `title`, `startTime`, `endTime`, `allDay`, `isRecurring`
 - `source` (e.g. `google_calendar`), `lastSyncedAt`
 
+**Free-time calculation note:** `allDay: true` events are excluded from
+free-time busy-block calculation entirely (they are not clipped/merged
+like timed events) — an all-day event does not reduce available free
+time.
+
 ### BriefingSnapshot
 One generated briefing (on-demand, per ADR-003 / ADR-010).
 - `date`, `generatedAt`
