@@ -19,6 +19,9 @@ model CalendarEvent {
   id            String   @id @default(cuid())
   externalId    String   @unique
   title         String
+  // Synced verbatim from Google Calendar's API response (source of truth is
+  // Google, per data-model.md) — not locally derived, so no local-midnight
+  // ambiguity applies here (contrast with BriefingSnapshot.date below).
   startTime     DateTime
   endTime       DateTime
   allDay        Boolean
@@ -73,6 +76,9 @@ model StudyTopic {
   examName                 String
   domain                   String
   status                   String
+  // Date-only (no time component), manually entered by the user (ADR-011) —
+  // no timezone conversion applies at write time (contrast with
+  // BriefingSnapshot.date above).
   deadline                 DateTime? @db.Date
   notes                    String?
   importance               String    @default("medium")
@@ -88,6 +94,9 @@ model Project {
   status                   String
   description              String?
   importance               String    @default("medium")
+  // Date-only (no time component), manually entered by the user (ADR-011) —
+  // no timezone conversion applies at write time (contrast with
+  // BriefingSnapshot.date above).
   dueDate                  DateTime? @db.Date
   estimatedDurationMinutes Int?
   createdAt                DateTime  @default(now())

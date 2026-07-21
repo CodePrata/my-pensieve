@@ -15,7 +15,7 @@ describe('BriefingController', () => {
     Pick<FreeTimeCalculatorService, 'calculateTodayFreeTime'>
   >;
   let briefingService: jest.Mocked<
-    Pick<BriefingService, 'getCurrentBriefing' | 'generatePriorities' | 'generateFullBriefing'>
+    Pick<BriefingService, 'generatePriorities' | 'generateFullBriefing'>
   >;
   let snapshotBlockCacheService: jest.Mocked<
     Pick<SnapshotBlockCacheService, 'findSnapshotForCurrentBlock'>
@@ -30,7 +30,6 @@ describe('BriefingController', () => {
       calculateTodayFreeTime: jest.fn(),
     };
     briefingService = {
-      getCurrentBriefing: jest.fn(),
       generatePriorities: jest.fn(),
       generateFullBriefing: jest.fn(),
     };

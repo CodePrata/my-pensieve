@@ -18,11 +18,6 @@ export class BriefingController {
     private readonly snapshotBlockCacheService: SnapshotBlockCacheService,
   ) {}
 
-  @Get()
-  getCurrentBriefing() {
-    return this.briefingService.getCurrentBriefing();
-  }
-
   @Post('generate')
   async generatePriorities() {
     const candidates = await this.candidateAggregator.getCandidates();

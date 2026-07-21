@@ -5,22 +5,6 @@ import { FreeTimeCalculatorService } from './free-time/free-time-calculator.serv
 import { BriefingNarrationService } from './narration/briefing-narration.service';
 import { PrioritizationEngineService } from './prioritization-engine.service';
 
-export interface BriefingPriority {
-  priorityType: 'study_topic' | 'project';
-  referenceId: string;
-  rank: number;
-  label: string;
-}
-
-export interface BriefingSnapshot {
-  date: string;
-  generatedAt: string;
-  degraded: boolean;
-  degradedReason: string | null;
-  priorities: BriefingPriority[];
-  narration: string;
-}
-
 @Injectable()
 export class BriefingService {
   constructor(
@@ -29,31 +13,6 @@ export class BriefingService {
     private readonly freeTimeCalculatorService: FreeTimeCalculatorService,
     private readonly briefingNarrationService: BriefingNarrationService,
   ) {}
-
-  getCurrentBriefing(): BriefingSnapshot {
-    return {
-      date: '2026-07-02',
-      generatedAt: '2026-07-02T08:30:00.000Z',
-      degraded: false,
-      degradedReason: null,
-      priorities: [
-        {
-          priorityType: 'study_topic',
-          referenceId: 'topic-001',
-          rank: 1,
-          label: 'Cryptography basics',
-        },
-        {
-          priorityType: 'project',
-          referenceId: 'proj-001',
-          rank: 2,
-          label: 'My Pensieve',
-        },
-      ],
-      narration:
-        'Morning is open until standup. Focus on Security+ cryptography, then a short coding session on the dashboard.',
-    };
-  }
 
   async generatePriorities(candidates: PriorityCandidate[]) {
     const degraded = candidates.length === 0;
@@ -65,9 +24,7 @@ export class BriefingService {
         date: startOfDay(now),
         generatedAt: now,
         degraded,
-        degradedReason: degraded
-          ? 'No study or project data available'
-          : null,
+        degradedReason: degraded ? 'No study or project data available' : null,
         priorities: {
           create: ranked.map(({ candidate, rank }) => ({
             priorityType: candidate.type,
