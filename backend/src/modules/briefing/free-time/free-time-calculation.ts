@@ -4,6 +4,7 @@ import { FreeTimeResult, FreeWindow } from './free-time.interface';
 export interface FreeTimeEventInput {
   startTime: string;
   endTime: string;
+  allDay: boolean;
 }
 
 interface BusyInterval {
@@ -22,6 +23,7 @@ export function computeFreeTime(
 ): FreeTimeResult {
   const busyBlocks = mergeBusyBlocks(
     events
+      .filter((event) => !event.allDay)
       .map((event) => clipEventToRange(event, now, endOfDay))
       .filter((block): block is BusyInterval => block !== null),
   );

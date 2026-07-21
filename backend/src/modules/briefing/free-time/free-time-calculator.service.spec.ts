@@ -145,6 +145,50 @@ describe('computeFreeTime', () => {
     ).toBe(false);
   });
 
+  it('ignores all-day events so the full remaining day stays free', () => {
+    const events = [
+      allDayEvent(
+        'birthday',
+        atLocal(2026, 7, 7, 0, 0),
+        atLocal(2026, 7, 8, 0, 0),
+      ),
+    ];
+
+    const result = computeFreeTime(now, endOfDay, events, minimumGapMinutes);
+
+    expect(result.windowCount).toBe(1);
+    expect(result.windows).toHaveLength(1);
+    expect(result.windows[0].start).toEqual(now);
+    expect(result.windows[0].end).toEqual(endOfDay);
+    expect(result.windows[0].durationMinutes).toBe(
+      minutesBetween(now, endOfDay),
+    );
+    expect(result.totalFreeMinutes).toBe(result.windows[0].durationMinutes);
+    expect(result.largestWindowMinutes).toBe(result.windows[0].durationMinutes);
+  });
+
+  it('ignores all-day events but still subtracts timed events from free time', () => {
+    const events = [
+      allDayEvent(
+        'birthday',
+        atLocal(2026, 7, 7, 0, 0),
+        atLocal(2026, 7, 8, 0, 0),
+      ),
+      event('meeting', atLocal(2026, 7, 7, 12, 0), atLocal(2026, 7, 7, 14, 0)),
+    ];
+
+    const result = computeFreeTime(now, endOfDay, events, minimumGapMinutes);
+
+    expect(result.windowCount).toBe(2);
+    expect(result.windows[0].start).toEqual(now);
+    expect(result.windows[0].end).toEqual(new Date(events[1].startTime));
+    expect(result.windows[1].start).toEqual(new Date(events[1].endTime));
+    expect(result.windows[1].end).toEqual(endOfDay);
+    expect(result.totalFreeMinutes).toBe(
+      result.windows[0].durationMinutes + result.windows[1].durationMinutes,
+    );
+  });
+
   it('derives totalFreeMinutes, largestWindowMinutes, and windowCount correctly', () => {
     const events = [
       event('a', atLocal(2026, 7, 7, 11, 0), atLocal(2026, 7, 7, 11, 30)),
@@ -177,6 +221,13 @@ function event(
     isRecurring: false,
     source: 'test',
     lastSyncedAt: start.toISOString(),
+  };
+}
+
+function allDayEvent(title: string, start: Date, end: Date) {
+  return {
+    ...event(title, start, end),
+    allDay: true,
   };
 }
 
