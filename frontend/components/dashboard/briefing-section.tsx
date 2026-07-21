@@ -11,7 +11,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatFreeTime } from "@/lib/format-free-time";
-import type { LiveBriefingData, LiveNarrationResult } from "@/lib/types";
+import type {
+  LiveBriefingData,
+  LiveNarrationResult,
+  PushBriefingError,
+  PushBriefingResult,
+} from "@/lib/types";
+
+const PUSH_ERROR_MESSAGES: Record<string, string> = {
+  telegram_auth_failed:
+    "Telegram bot token is invalid or revoked. Check the backend configuration.",
+  telegram_chat_not_found:
+    "Message the bot on Telegram first, then try again.",
+  transient: "Couldn't reach Telegram. Try again in a moment.",
+};
 
 const briefingCardClassName =
   "rounded-xl border border-accent-peach/30 bg-briefing-surface shadow-none ring-0 [--card-spacing:--spacing(6)]";
@@ -43,6 +56,13 @@ export function BriefingSection() {
   const [narration, setNarration] = useState<LiveNarrationResult | null>(null);
   const [narrationLoading, setNarrationLoading] = useState(true);
   const [narrationError, setNarrationError] = useState<string | null>(null);
+
+  const [pushState, setPushState] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [pushErrorMessage, setPushErrorMessage] = useState<string | null>(
+    null,
+  );
 
   const dataRequestId = useRef(0);
   const narrationRequestId = useRef(0);
@@ -102,6 +122,31 @@ export function BriefingSection() {
     void fetchLiveNarration();
   }, [fetchLiveData, fetchLiveNarration]);
 
+  const handlePush = useCallback(async () => {
+    setPushState("loading");
+    setPushErrorMessage(null);
+
+    try {
+      const response = await fetch("/briefing/push", { method: "POST" });
+      if (!response.ok) {
+        const body = (await response
+          .json()
+          .catch(() => null)) as PushBriefingError | null;
+        const message =
+          (body?.errorType && PUSH_ERROR_MESSAGES[body.errorType]) ??
+          `Failed to send briefing (${response.status})`;
+        setPushErrorMessage(message);
+        setPushState("error");
+        return;
+      }
+      (await response.json()) as PushBriefingResult;
+      setPushState("success");
+    } catch {
+      setPushErrorMessage(PUSH_ERROR_MESSAGES.transient);
+      setPushState("error");
+    }
+  }, []);
+
   useEffect(() => {
     void fetchLiveData();
     void fetchLiveNarration();
@@ -124,26 +169,55 @@ export function BriefingSection() {
                 : null}
             </CardDescription>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="shrink-0"
-          >
-            {refreshing ? (
-              <>
-                <span
-                  className="inline-block size-3.5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
-                  aria-hidden="true"
-                />
-                Refreshing…
-              </>
-            ) : (
-              "Refresh"
-            )}
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handlePush()}
+              disabled={pushState === "loading"}
+            >
+              {pushState === "loading" ? (
+                <>
+                  <span
+                    className="inline-block size-3.5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  Sending…
+                </>
+              ) : (
+                "Send to Telegram"
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              {refreshing ? (
+                <>
+                  <span
+                    className="inline-block size-3.5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  Refreshing…
+                </>
+              ) : (
+                "Refresh"
+              )}
+            </Button>
+          </div>
         </div>
+        {pushState === "success" ? (
+          <p className="font-sans text-xs text-muted-foreground">
+            Sent to Telegram
+          </p>
+        ) : pushState === "error" && pushErrorMessage ? (
+          <Alert variant="destructive">
+            <AlertTitle>Couldn&apos;t send to Telegram</AlertTitle>
+            <AlertDescription>{pushErrorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-6 pt-2">
         <div className="space-y-2">

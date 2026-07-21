@@ -20,3 +20,5 @@ export interface ProjectCandidate extends PriorityCandidateBase {
 }
 
 export type PriorityCandidate = StudyCandidate | ProjectCandidate;
+
+export type HydratedPriority = PriorityCandidate & { rank: number };

@@ -11,6 +11,7 @@ import { SnapshotBlockCacheService } from './domain/snapshot-block-cache.service
 import { FreeTimeModule } from './free-time/free-time.module';
 import { BriefingNarrationService } from './narration/briefing-narration.service';
 import { PrioritizationEngineService } from './prioritization-engine.service';
+import { TelegramPushService } from './telegram-push.service';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { PrioritizationEngineService } from './prioritization-engine.service';
     SnapshotBlockCacheService,
     PrioritizationEngineService,
     BriefingNarrationService,
+    TelegramPushService,
   ],
 })
 export class BriefingModule {}

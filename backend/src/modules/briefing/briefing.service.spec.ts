@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BriefingService } from './briefing.service';
+import { CandidateAggregatorService } from './domain/candidate-aggregator.service';
 import { PriorityCandidate } from './domain/priority-candidate.interface';
 import { FreeTimeCalculatorService } from './free-time/free-time-calculator.service';
 import { BriefingNarrationService } from './narration/briefing-narration.service';
@@ -13,6 +14,10 @@ describe('BriefingService', () => {
     briefingSnapshot: {
       create: jest.fn(),
     },
+  };
+
+  const candidateAggregator = {
+    getCandidates: jest.fn(),
   };
 
   const prioritizationEngine = {
@@ -61,6 +66,10 @@ describe('BriefingService', () => {
       providers: [
         BriefingService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: CandidateAggregatorService,
+          useValue: candidateAggregator,
+        },
         {
           provide: PrioritizationEngineService,
           useValue: prioritizationEngine,

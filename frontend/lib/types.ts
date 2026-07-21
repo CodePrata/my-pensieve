@@ -130,3 +130,19 @@ export interface LiveNarrationResult {
   degradedReason: string | null;
   generatedAt: string;
 }
+
+export interface PushBriefingResult {
+  sent: true;
+}
+
+export type PushBriefingErrorType =
+  | "telegram_auth_failed"
+  | "telegram_chat_not_found"
+  | "transient";
+
+export interface PushBriefingError {
+  statusCode: number;
+  message: string;
+  errorType: PushBriefingErrorType;
+  error: string;
+}
