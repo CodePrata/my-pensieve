@@ -1,4 +1,5 @@
 import { PriorityCandidate } from '../domain/priority-candidate.interface';
+import { formatFreeTime } from '../free-time/format-free-time.util';
 import { FreeTimeResult } from '../free-time/free-time.interface';
 
 const SYSTEM_PROMPT = `You are an elegant, minimal digital assistant built into a personal journal ecosystem. Your task is to process the provided JSON data and generate a daily briefing matching an exact structural layout.
@@ -8,7 +9,7 @@ Rules:
 3. Follow the required layout structure EXACTLY. Do not add markdown headers (like # or ##), do not bold words, and do not add generic AI filler phrases at the start or end.
 4. Output a maximum of 3 bullet points under the header line. The candidates array is provided in priority rank order — treat candidates[0] as the top priority. Do not re-rank. If no priority candidates exist, output exactly one bullet: "- Nothing from Study or Projects yet — this section is still catching up."
 5. Keep bullet points short, factual, and strictly based on the provided data. Do not invent details.
-6. If totalFreeMinutes is 0, write "You don't have any free time today." instead of "You have 0 minutes of free time."
+6. If formattedTotalFreeTime is "0 minutes", write "You don't have any free time today." instead of "You have 0 minutes of free time."
 7. If no priority candidates exist, write "Your primary focus should be on getting Study and Projects data flowing — nothing's tracked there yet." instead of naming a top priority.
 
 Required Layout Template:
@@ -16,7 +17,7 @@ Good [Morning/Afternoon/Evening] [User Name],
 Here's what you have today:
 - [bullet]
 - [bullet]
-You have [X] minutes of free time.
+You have [formattedTotalFreeTime] of free time.
 Your primary focus should be on [top priority focus item name].`;
 
 const EMPTY_CANDIDATES_BULLET =
@@ -55,6 +56,15 @@ For this input, the last line must be exactly: "Your primary focus should be on 
 Now generate the briefing.`;
 }
 
+function buildPromptFreeTimeResult(freeTimeResult: FreeTimeResult) {
+  const { totalFreeMinutes, ...rest } = freeTimeResult;
+
+  return {
+    ...rest,
+    formattedTotalFreeTime: formatFreeTime(totalFreeMinutes),
+  };
+}
+
 export function buildOllamaPrompt(
   candidates: PriorityCandidate[],
   freeTimeResult: FreeTimeResult,
@@ -63,7 +73,12 @@ export function buildOllamaPrompt(
 ): string {
   const timeOfDay = deriveTimeOfDay(now);
   const inputData = JSON.stringify(
-    { candidates, freeTimeResult, timeOfDay, userName },
+    {
+      candidates,
+      freeTimeResult: buildPromptFreeTimeResult(freeTimeResult),
+      timeOfDay,
+      userName,
+    },
     null,
     2,
   );
@@ -122,7 +137,7 @@ export function buildFallbackNarration(
     lines.push("You don't have any free time today.");
   } else {
     lines.push(
-      `You have ${freeTimeResult.totalFreeMinutes} minutes of free time.`,
+      `You have ${formatFreeTime(freeTimeResult.totalFreeMinutes)} of free time.`,
     );
   }
 

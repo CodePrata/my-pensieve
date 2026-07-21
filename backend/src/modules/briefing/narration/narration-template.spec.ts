@@ -50,8 +50,31 @@ describe('buildOllamaPrompt', () => {
     expect(prompt).toContain('"userName": "Alex"');
     expect(prompt).toContain('"candidates"');
     expect(prompt).toContain('"freeTimeResult"');
-    expect(prompt).toContain('"totalFreeMinutes": 120');
+    expect(prompt).toContain('"formattedTotalFreeTime": "2 hours"');
+    expect(prompt).not.toContain('"totalFreeMinutes"');
   });
+
+  it.each([
+    [0, '0 minutes'],
+    [45, '45 minutes'],
+    [60, '1 hour'],
+    [369, '6 hours 9 minutes'],
+    [720, '12 hours'],
+  ])(
+    'includes formatted free time (%i -> %s) instead of raw minutes in prompt JSON',
+    (totalFreeMinutes, formatted) => {
+      const prompt = buildOllamaPrompt(
+        candidates,
+        emptyFreeTime(totalFreeMinutes),
+        morning,
+        'Alex',
+      );
+
+      expect(prompt).toContain(`"formattedTotalFreeTime": "${formatted}"`);
+      expect(prompt).not.toContain(`"totalFreeMinutes": ${totalFreeMinutes}`);
+      expect(prompt).not.toMatch(/"totalFreeMinutes"\s*:/);
+    },
+  );
 
   it('places the focus-line instruction last, after input data', () => {
     const prompt = buildOllamaPrompt(
@@ -235,6 +258,30 @@ describe('buildFallbackNarration', () => {
     expect(narration).toContain("You don't have any free time today.");
     expect(narration).not.toContain('You have 0 minutes of free time.');
   });
+
+  it.each([
+    [45, 'You have 45 minutes of free time.'],
+    [60, 'You have 1 hour of free time.'],
+    [369, 'You have 6 hours 9 minutes of free time.'],
+    [720, 'You have 12 hours of free time.'],
+  ])(
+    'formats %i minutes as human-readable free-time phrasing',
+    (totalFreeMinutes, expectedLine) => {
+      const narration = buildFallbackNarration(
+        [],
+        emptyFreeTime(totalFreeMinutes),
+        now,
+        'Alex',
+      );
+
+      expect(narration).toContain(expectedLine);
+      if (totalFreeMinutes >= 60) {
+        expect(narration).not.toContain(
+          `You have ${totalFreeMinutes} minutes of free time.`,
+        );
+      }
+    },
+  );
 
   it('outputs only one bullet for a single candidate', () => {
     const narration = buildFallbackNarration(
