@@ -7,6 +7,7 @@ import {
   resolveAppendTargetTitle,
   WikiGeneratorService,
 } from './wiki-generator.service';
+import { buildProjectWikiContext } from './wiki-path.util';
 
 jest.mock('fs/promises');
 
@@ -241,9 +242,15 @@ describe('WikiGeneratorService', () => {
     ['My Pensieve Overview', 'My Pensieve'],
     ['My-Pensieve', 'My Pensieve'],
     ['My Pensieve Overview.md', 'My Pensieve'],
+    ['My Pensieve', 'My-Pensieve Overview'],
   ])(
     'loosely matches append title "%s" to canonical title "%s"',
     async (ollamaTitle, canonicalTitle) => {
+      const overviewFileStem =
+        canonicalTitle === 'My-Pensieve Overview'
+          ? 'My-Pensieve-Overview'
+          : 'My-Pensieve';
+
       prisma.rawItem.findMany.mockResolvedValue([
         {
           id: 'raw-loose',
@@ -260,7 +267,7 @@ describe('WikiGeneratorService', () => {
         {
           id: 'wiki-index',
           title: canonicalTitle,
-          filePath: 'wiki/my-pensieve/My-Pensieve.md',
+          filePath: `wiki/my-pensieve/${overviewFileStem}.md`,
         },
       ]);
       ollamaClient.generate.mockResolvedValue(
@@ -272,7 +279,7 @@ describe('WikiGeneratorService', () => {
       expect(result).toEqual({ processed: 1, failed: 0, failures: [] });
       expect(vaultWriter.appendWikiFile).toHaveBeenCalledWith(
         '/vault',
-        'wiki/my-pensieve/My-Pensieve.md',
+        `wiki/my-pensieve/${overviewFileStem}.md`,
         expect.stringContaining('Captured body text'),
       );
       expect(prisma.wikiPage.update).toHaveBeenCalledWith({
@@ -287,6 +294,11 @@ describe('WikiGeneratorService', () => {
       title: 'My Pensieve',
       filePath: 'wiki/my-pensieve/My-Pensieve.md',
     };
+    const projectOverviewPage = {
+      title: 'My-Pensieve Overview',
+      filePath: 'wiki/my-pensieve/My-Pensieve-Overview.md',
+    };
+    const projectCtx = buildProjectWikiContext('My Pensieve', 'my-pensieve');
 
     it('normalizes titles by stripping extensions, punctuation, and casing', () => {
       expect(normalizeWikiTitleForMatch('My Pensieve Overview.md')).toBe(
@@ -305,6 +317,21 @@ describe('WikiGeneratorService', () => {
       expect(
         resolveAppendTargetTitle('My Pensieve Overview.md', [projectIndexPage]),
       ).toBe('My Pensieve');
+    });
+
+    it('resolves a shorter Ollama title to a longer existing overview page', () => {
+      expect(
+        resolveAppendTargetTitle('My Pensieve', [projectOverviewPage]),
+      ).toBe('My-Pensieve Overview');
+    });
+
+    it('falls back to the project overview page when Ollama uses the project name', () => {
+      expect(
+        resolveAppendTargetTitle('My Pensieve', [projectOverviewPage], projectCtx),
+      ).toBe('My-Pensieve Overview');
+      expect(
+        resolveAppendTargetTitle('my-pensieve', [projectOverviewPage], projectCtx),
+      ).toBe('My-Pensieve Overview');
     });
   });
 

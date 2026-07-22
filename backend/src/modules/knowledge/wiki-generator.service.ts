@@ -48,9 +48,127 @@ export function normalizeWikiTitleForMatch(value: string): string {
     .toLowerCase();
 }
 
+const MIN_SUBSTRING_MATCH_LENGTH = 4;
+
+function normalizedTitleMatchesLoosely(
+  normalizedOllama: string,
+  normalizedCandidate: string,
+): boolean {
+  if (!normalizedCandidate || !normalizedOllama) {
+    return false;
+  }
+
+  if (normalizedOllama === normalizedCandidate) {
+    return true;
+  }
+
+  const [shorter, longer] =
+    normalizedOllama.length <= normalizedCandidate.length
+      ? [normalizedOllama, normalizedCandidate]
+      : [normalizedCandidate, normalizedOllama];
+
+  if (
+    longer.startsWith(`${shorter} `) ||
+    (longer.startsWith(shorter) &&
+      (longer.length === shorter.length || longer[shorter.length] === ' '))
+  ) {
+    return true;
+  }
+
+  if (
+    shorter.length >= MIN_SUBSTRING_MATCH_LENGTH &&
+    (normalizedOllama.includes(normalizedCandidate) ||
+      normalizedCandidate.includes(normalizedOllama))
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function pageLooseMatchKeys(page: ExistingWikiPageRef): string[] {
+  return [
+    normalizeWikiTitleForMatch(page.title),
+    normalizeWikiTitleForMatch(path.basename(page.filePath, '.md')),
+  ];
+}
+
+function pickBestLooseMatch(pages: ExistingWikiPageRef[]): ExistingWikiPageRef {
+  return pages.reduce((best, page) => {
+    const bestKey = Math.max(...pageLooseMatchKeys(best).map((key) => key.length));
+    const pageKey = Math.max(...pageLooseMatchKeys(page).map((key) => key.length));
+    return pageKey > bestKey ? page : best;
+  });
+}
+
+function findLoosePageMatches(
+  normalizedOllama: string,
+  existingPages: ExistingWikiPageRef[],
+): ExistingWikiPageRef[] {
+  return existingPages.filter((page) =>
+    pageLooseMatchKeys(page).some((key) =>
+      normalizedTitleMatchesLoosely(normalizedOllama, key),
+    ),
+  );
+}
+
+function resolveProjectOverviewPage(
+  normalizedOllama: string,
+  existingPages: ExistingWikiPageRef[],
+  projectCtx: ProjectWikiContext,
+): ExistingWikiPageRef | null {
+  const normalizedProjectName = normalizeWikiTitleForMatch(projectCtx.projectName);
+  const normalizedProjectSlug = normalizeWikiTitleForMatch(projectCtx.projectSlug);
+  const matchesProjectIdentity =
+    normalizedOllama === normalizedProjectName ||
+    normalizedOllama === normalizedProjectSlug ||
+    normalizedTitleMatchesLoosely(normalizedOllama, normalizedProjectName) ||
+    normalizedTitleMatchesLoosely(normalizedOllama, normalizedProjectSlug);
+
+  if (!matchesProjectIdentity) {
+    return null;
+  }
+
+  const projectPages = existingPages.filter((page) =>
+    page.filePath.startsWith(`wiki/${projectCtx.projectSlug}/`),
+  );
+  if (projectPages.length === 0) {
+    return null;
+  }
+
+  const indexPage = projectPages.find(
+    (page) => page.filePath === projectCtx.indexFilePath,
+  );
+  if (indexPage) {
+    return indexPage;
+  }
+
+  const looseProjectMatches = projectPages.filter((page) =>
+    pageLooseMatchKeys(page).some(
+      (key) =>
+        normalizedTitleMatchesLoosely(normalizedOllama, key) ||
+        normalizedTitleMatchesLoosely(normalizedProjectName, key) ||
+        normalizedTitleMatchesLoosely(normalizedProjectSlug, key),
+    ),
+  );
+  if (looseProjectMatches.length === 1) {
+    return looseProjectMatches[0];
+  }
+  if (looseProjectMatches.length > 1) {
+    return pickBestLooseMatch(looseProjectMatches);
+  }
+
+  if (projectPages.length === 1) {
+    return projectPages[0];
+  }
+
+  return pickBestLooseMatch(projectPages);
+}
+
 export function resolveAppendTargetTitle(
   ollamaTitle: string,
   existingPages: ExistingWikiPageRef[],
+  projectCtx?: ProjectWikiContext | null,
 ): string | null {
   const trimmed = ollamaTitle.trim();
 
@@ -82,51 +200,26 @@ export function resolveAppendTargetTitle(
     return normalizedBasenameMatch.title;
   }
 
-  const prefixMatches = existingPages.filter((page) => {
-    const normalizedTitle = normalizeWikiTitleForMatch(page.title);
-    const normalizedBasename = normalizeWikiTitleForMatch(
-      path.basename(page.filePath, '.md'),
-    );
-    return (
-      normalizedTitleMatchesLoosely(normalizedOllama, normalizedTitle) ||
-      normalizedTitleMatchesLoosely(normalizedOllama, normalizedBasename)
-    );
-  });
-
+  const prefixMatches = findLoosePageMatches(normalizedOllama, existingPages);
   if (prefixMatches.length === 1) {
     return prefixMatches[0].title;
   }
-
   if (prefixMatches.length > 1) {
-    const bestMatch = prefixMatches.reduce((best, page) => {
-      const bestKey = Math.max(
-        normalizeWikiTitleForMatch(best.title).length,
-        normalizeWikiTitleForMatch(path.basename(best.filePath, '.md')).length,
-      );
-      const pageKey = Math.max(
-        normalizeWikiTitleForMatch(page.title).length,
-        normalizeWikiTitleForMatch(path.basename(page.filePath, '.md')).length,
-      );
-      return pageKey > bestKey ? page : best;
-    });
-    return bestMatch.title;
+    return pickBestLooseMatch(prefixMatches).title;
+  }
+
+  if (projectCtx) {
+    const projectOverview = resolveProjectOverviewPage(
+      normalizedOllama,
+      existingPages,
+      projectCtx,
+    );
+    if (projectOverview) {
+      return projectOverview.title;
+    }
   }
 
   return null;
-}
-
-function normalizedTitleMatchesLoosely(
-  normalizedOllama: string,
-  normalizedCandidate: string,
-): boolean {
-  if (!normalizedCandidate) {
-    return false;
-  }
-
-  return (
-    normalizedOllama === normalizedCandidate ||
-    normalizedOllama.startsWith(`${normalizedCandidate} `)
-  );
 }
 
 @Injectable()
@@ -206,7 +299,11 @@ export class WikiGeneratorService {
     const parsedDecision = parseWikiGenerationResponse(rawResponse);
     let decision: WikiGenerationDecision;
     if (parsedDecision.action === 'append') {
-      decision = this.resolveAppendDecision(parsedDecision, existingPages);
+      decision = this.resolveAppendDecision(
+        parsedDecision,
+        existingPages,
+        projectCtx,
+      );
     } else {
       decision = parsedDecision;
     }
@@ -294,10 +391,12 @@ export class WikiGeneratorService {
   private resolveAppendDecision(
     decision: Extract<WikiGenerationDecision, { action: 'append' }>,
     existingPages: { id: string; title: string; filePath: string }[],
+    projectCtx: ProjectWikiContext | null,
   ): Extract<WikiGenerationDecision, { action: 'append' }> {
     const resolvedTitle = resolveAppendTargetTitle(
       decision.title,
       existingPages,
+      projectCtx,
     );
     if (!resolvedTitle) {
       throw new Error(
