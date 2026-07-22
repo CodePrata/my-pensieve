@@ -1,10 +1,13 @@
 import {
   Controller,
+  DefaultValuePipe,
   Get,
   HttpException,
   HttpStatus,
   Logger,
+  ParseIntPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import { GithubImportService } from './github-import.service';
 import { KnowledgeService } from './knowledge.service';
@@ -40,8 +43,11 @@ export class KnowledgeController {
   }
 
   @Get('inbox')
-  getInbox() {
-    return this.knowledgeService.getInbox();
+  getInbox(
+    @Query('limit', new DefaultValuePipe(4), ParseIntPipe) limit: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
+  ) {
+    return this.knowledgeService.getInbox(limit, offset);
   }
 
   @Post('sync-github')

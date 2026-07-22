@@ -10,6 +10,7 @@ describe('KnowledgeService', () => {
     rawItem: {
       findMany: jest.fn(),
       create: jest.fn(),
+      count: jest.fn(),
     },
   };
 
@@ -96,7 +97,7 @@ describe('KnowledgeService', () => {
   });
 
   describe('getInbox', () => {
-    it('maps Prisma rows to the API shape with ISO date strings', async () => {
+    it('maps Prisma rows to the paginated API shape with ISO date strings', async () => {
       prisma.rawItem.findMany.mockResolvedValue([
         {
           id: 'raw-1',
@@ -108,20 +109,52 @@ describe('KnowledgeService', () => {
           processed: false,
         },
       ]);
+      prisma.rawItem.count
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(3);
 
-      const result = await service.getInbox();
+      const result = await service.getInbox(4, 0);
 
-      expect(result).toEqual([
-        {
-          id: 'raw-1',
-          sourceType: 'text',
-          captureMethod: 'capture_bot',
-          sourceUrl: null,
-          rawFilePath: 'raw/text/note.md',
-          capturedAt: '2026-07-20T10:00:00.000Z',
-          processed: false,
-        },
-      ]);
+      expect(prisma.rawItem.findMany).toHaveBeenCalledWith({
+        orderBy: { capturedAt: 'desc' },
+        take: 4,
+        skip: 0,
+      });
+      expect(prisma.rawItem.count).toHaveBeenCalledWith({
+        where: { processed: false },
+      });
+      expect(result).toEqual({
+        items: [
+          {
+            id: 'raw-1',
+            sourceType: 'text',
+            captureMethod: 'capture_bot',
+            sourceUrl: null,
+            rawFilePath: 'raw/text/note.md',
+            capturedAt: '2026-07-20T10:00:00.000Z',
+            processed: false,
+          },
+        ],
+        totalCount: 5,
+        unprocessedCount: 3,
+        hasMore: true,
+      });
+    });
+
+    it('returns hasMore false when the final page is reached', async () => {
+      prisma.rawItem.findMany.mockResolvedValue([]);
+      prisma.rawItem.count
+        .mockResolvedValueOnce(4)
+        .mockResolvedValueOnce(0);
+
+      const result = await service.getInbox(4, 4);
+
+      expect(result).toEqual({
+        items: [],
+        totalCount: 4,
+        unprocessedCount: 0,
+        hasMore: false,
+      });
     });
   });
 });

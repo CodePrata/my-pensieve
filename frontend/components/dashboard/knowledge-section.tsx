@@ -12,10 +12,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { syncKnowledgeInboxOnce } from "@/lib/knowledge-sync";
-import type { GithubSyncResult, ProcessInboxResult, RawItem } from "@/lib/types";
+import type {
+  GithubSyncResult,
+  InboxResult,
+  ProcessInboxResult,
+  RawItem,
+} from "@/lib/types";
+
+const INBOX_PAGE_SIZE = 4;
 
 export function KnowledgeSection() {
   const [items, setItems] = useState<RawItem[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [unprocessedCount, setUnprocessedCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [syncing, setSyncing] = useState(true);
   const [syncFailed, setSyncFailed] = useState(false);
   const [inboxError, setInboxError] = useState<string | null>(null);
@@ -29,13 +40,33 @@ export function KnowledgeSection() {
     useState<GithubSyncResult | null>(null);
   const [githubSyncError, setGithubSyncError] = useState<string | null>(null);
 
-  async function fetchInbox() {
-    const response = await fetch("/knowledge/inbox");
+  async function fetchInbox(offset = 0, append = false) {
+    const params = new URLSearchParams({
+      limit: String(INBOX_PAGE_SIZE),
+      offset: String(offset),
+    });
+    const response = await fetch(`/knowledge/inbox?${params}`);
     if (!response.ok) {
       throw new Error(`Failed to load inbox (${response.status})`);
     }
-    const data = (await response.json()) as RawItem[];
-    setItems(data);
+    const data = (await response.json()) as InboxResult;
+    setItems((current) => (append ? [...current, ...data.items] : data.items));
+    setTotalCount(data.totalCount);
+    setUnprocessedCount(data.unprocessedCount);
+    setHasMore(data.hasMore);
+  }
+
+  async function handleLoadMore() {
+    setLoadingMore(true);
+    try {
+      await fetchInbox(items.length, true);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to load more items";
+      setInboxError(message);
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   useEffect(() => {
@@ -127,7 +158,11 @@ export function KnowledgeSection() {
     }
   }
 
-  const unprocessedCount = items.filter((item) => !item.processed).length;
+  const processInboxLabel = processing
+    ? "Processing…"
+    : unprocessedCount > 0
+      ? `Process Inbox (${unprocessedCount})`
+      : "Process Inbox";
 
   return (
     <Card className="rounded-lg border border-border bg-card shadow-none ring-0">
@@ -154,7 +189,7 @@ export function KnowledgeSection() {
             onClick={() => void handleProcessInbox()}
             disabled={processing || syncing || unprocessedCount === 0}
           >
-            {processing ? "Processing…" : "Process Inbox"}
+            {processInboxLabel}
           </Button>
         </div>
       </CardHeader>
@@ -249,41 +284,54 @@ export function KnowledgeSection() {
           </Alert>
         )}
 
-        {!syncing && !inboxError && items.length === 0 && (
+        {!syncing && !inboxError && totalCount === 0 && (
           <p className="text-sm text-muted-foreground">
             No captured items yet.
           </p>
         )}
 
         {!inboxError && items.length > 0 && (
-          <ul className="space-y-3">
-            {items.map((item) => (
-              <li
-                key={item.id}
-                className="rounded-lg border border-border/80 bg-background/40 p-3"
+          <div className="space-y-3">
+            <ul className="space-y-3">
+              {items.map((item) => (
+                <li
+                  key={item.id}
+                  className="rounded-lg border border-border/80 bg-background/40 p-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-medium">{item.rawFilePath}</p>
+                    <Badge variant="outline">{item.sourceType}</Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Captured {new Date(item.capturedAt).toLocaleString()} via{" "}
+                    {item.captureMethod.replace("_", " ")}
+                    {item.processed ? " · processed" : " · pending"}
+                  </p>
+                  {item.sourceUrl && (
+                    <a
+                      href={item.sourceUrl}
+                      className="mt-2 inline-block text-sm text-primary underline-offset-4 hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {item.sourceUrl}
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {hasMore && items.length < totalCount && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => void handleLoadMore()}
+                disabled={loadingMore}
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium">{item.rawFilePath}</p>
-                  <Badge variant="outline">{item.sourceType}</Badge>
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Captured {new Date(item.capturedAt).toLocaleString()} via{" "}
-                  {item.captureMethod.replace("_", " ")}
-                  {item.processed ? " · processed" : " · pending"}
-                </p>
-                {item.sourceUrl && (
-                  <a
-                    href={item.sourceUrl}
-                    className="mt-2 inline-block text-sm text-primary underline-offset-4 hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {item.sourceUrl}
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
+                {loadingMore ? "Loading…" : "Load More"}
+              </Button>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>

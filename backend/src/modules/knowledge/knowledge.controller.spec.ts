@@ -1,4 +1,5 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
+import { GithubImportService } from './github-import.service';
 import { KnowledgeController } from './knowledge.controller';
 import { KnowledgeService } from './knowledge.service';
 import { WikiGeneratorService } from './wiki-generator.service';
@@ -24,6 +25,7 @@ describe('KnowledgeController', () => {
     controller = new KnowledgeController(
       knowledgeService as unknown as KnowledgeService,
       wikiGeneratorService as unknown as WikiGeneratorService,
+      { syncGithubSources: jest.fn() } as unknown as GithubImportService,
     );
   });
 
@@ -60,12 +62,33 @@ describe('KnowledgeController', () => {
   });
 
   describe('GET /knowledge/inbox', () => {
-    it('delegates directly to the service', () => {
-      knowledgeService.getInbox.mockReturnValue([] as never);
+    it('delegates to the service with limit and offset query params', () => {
+      knowledgeService.getInbox.mockReturnValue({
+        items: [],
+        totalCount: 0,
+        unprocessedCount: 0,
+        hasMore: false,
+      } as never);
 
-      void controller.getInbox();
+      void controller.getInbox(4, 8);
 
-      expect(knowledgeService.getInbox).toHaveBeenCalledTimes(1);
+      expect(knowledgeService.getInbox).toHaveBeenCalledWith(4, 8);
+    });
+
+    it('returns unprocessedCount in the inbox response shape', () => {
+      knowledgeService.getInbox.mockReturnValue({
+        items: [],
+        totalCount: 10,
+        unprocessedCount: 3,
+        hasMore: true,
+      } as never);
+
+      expect(controller.getInbox(4, 0)).toEqual({
+        items: [],
+        totalCount: 10,
+        unprocessedCount: 3,
+        hasMore: true,
+      });
     });
   });
 

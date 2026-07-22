@@ -17,6 +17,13 @@ export interface SyncRawItemsResult {
   skipped: number;
 }
 
+export interface InboxResult {
+  items: RawItem[];
+  totalCount: number;
+  unprocessedCount: number;
+  hasMore: boolean;
+}
+
 @Injectable()
 export class KnowledgeService {
   private readonly logger = new Logger(KnowledgeService.name);
@@ -73,12 +80,18 @@ export class KnowledgeService {
     });
   }
 
-  async getInbox(): Promise<RawItem[]> {
-    const items = await this.prisma.rawItem.findMany({
-      orderBy: { capturedAt: 'desc' },
-    });
+  async getInbox(limit = 4, offset = 0): Promise<InboxResult> {
+    const [rows, totalCount, unprocessedCount] = await Promise.all([
+      this.prisma.rawItem.findMany({
+        orderBy: { capturedAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.rawItem.count(),
+      this.prisma.rawItem.count({ where: { processed: false } }),
+    ]);
 
-    return items.map((item) => ({
+    const items = rows.map((item) => ({
       id: item.id,
       sourceType: item.sourceType,
       captureMethod: item.captureMethod,
@@ -87,5 +100,12 @@ export class KnowledgeService {
       capturedAt: item.capturedAt.toISOString(),
       processed: item.processed,
     }));
+
+    return {
+      items,
+      totalCount,
+      unprocessedCount,
+      hasMore: offset + items.length < totalCount,
+    };
   }
 }

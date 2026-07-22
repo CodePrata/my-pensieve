@@ -64,6 +64,13 @@ export interface RawItem {
   processed: boolean;
 }
 
+export interface InboxResult {
+  items: RawItem[];
+  totalCount: number;
+  unprocessedCount: number;
+  hasMore: boolean;
+}
+
 export interface SyncRawItemsResult {
   created: number;
   skipped: number;
