@@ -21,6 +21,41 @@ interface ParsedRepo {
 }
 
 const GITHUB_URL_PATTERN = /github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?\/?$/;
+const MAX_FILES_PER_COMMIT = 25;
+
+interface CommitFileChange {
+  filename: string;
+  status: string;
+  additions: number;
+  deletions: number;
+}
+
+function formatCommitEntry(
+  sha: string,
+  author: string,
+  date: string,
+  messageFirstLine: string,
+  files: CommitFileChange[],
+): string {
+  const header = `- **${sha}** ${author} ${date} — ${messageFirstLine}`;
+  if (files.length === 0) {
+    return `${header}\n  - _(no file changes recorded)_`;
+  }
+
+  const visibleFiles = files.slice(0, MAX_FILES_PER_COMMIT);
+  const fileLines = visibleFiles.map(
+    (file) =>
+      `  - \`${file.filename}\` ${file.status} +${file.additions} / -${file.deletions}`,
+  );
+
+  if (files.length > MAX_FILES_PER_COMMIT) {
+    fileLines.push(
+      `  - _…and ${files.length - MAX_FILES_PER_COMMIT} more files_`,
+    );
+  }
+
+  return [header, ...fileLines].join('\n');
+}
 
 function parseRepoUrl(repoUrl: string): ParsedRepo {
   const match = GITHUB_URL_PATTERN.exec(repoUrl.trim());
@@ -112,25 +147,49 @@ export class GithubImportService {
       return true;
     }
 
+    const commitRef = await this.resolveCommitRef(octokit, owner, repo);
+    const lastSyncDate = lastRawItem.capturedAt;
     const { data: commits } = await octokit.rest.repos.listCommits({
       owner,
       repo,
-      since: lastRawItem.capturedAt.toISOString(),
+      sha: commitRef,
+      since: lastSyncDate.toISOString(),
     });
 
     if (commits.length === 0) {
       return false;
     }
 
-    const lines = [...commits].reverse().map((commit) => {
-      const sha = commit.sha.slice(0, 7);
-      const author =
-        commit.commit.author?.name ?? commit.author?.login ?? 'unknown';
-      const date = commit.commit.author?.date ?? '';
-      const messageFirstLine = commit.commit.message.split('\n')[0];
-      return `- ${sha} ${author} ${date} — ${messageFirstLine}`;
-    });
-    const body = lines.join('\n');
+    const commitEntries = await Promise.all(
+      [...commits].reverse().map(async (commit) => {
+        const { data: detail } = await octokit.rest.repos.getCommit({
+          owner,
+          repo,
+          ref: commit.sha,
+        });
+
+        const sha = commit.sha.slice(0, 7);
+        const author =
+          commit.commit.author?.name ?? commit.author?.login ?? 'unknown';
+        const date = commit.commit.author?.date ?? '';
+        const messageFirstLine = commit.commit.message.split('\n')[0];
+        const files = (detail.files ?? []).map((file) => ({
+          filename: file.filename,
+          status: file.status,
+          additions: file.additions ?? 0,
+          deletions: file.deletions ?? 0,
+        }));
+
+        return formatCommitEntry(
+          sha,
+          author,
+          date,
+          messageFirstLine,
+          files,
+        );
+      }),
+    );
+    const body = commitEntries.join('\n\n');
 
     await this.vaultWriter.writeGithubRawFile(
       vaultPath,
@@ -139,5 +198,19 @@ export class GithubImportService {
       body,
     );
     return true;
+  }
+
+  private async resolveCommitRef(
+    octokit: Octokit,
+    owner: string,
+    repo: string,
+  ): Promise<string> {
+    try {
+      await octokit.rest.repos.getBranch({ owner, repo, branch: 'develop' });
+      return 'develop';
+    } catch {
+      const { data } = await octokit.rest.repos.get({ owner, repo });
+      return data.default_branch;
+    }
   }
 }
