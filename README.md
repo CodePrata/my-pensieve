@@ -31,4 +31,14 @@ npm run dev
 
 Copy `capture-bot/.env.example` to `capture-bot/.env` and fill in the required values before starting.
 
+## Running via Docker Compose
+
+Postgres, the NestJS backend, and the Next.js frontend run in Docker Compose. Ollama stays native on the host (ADR-003) — start it before bringing up the stack. The Capture Bot also stays native and is started separately, per the instructions above.
+
+```bash
+cp .env.example .env          # fill in Postgres credentials, ports, VAULT_HOST_PATH
+cp backend/.env.example backend/.env   # fill in the rest (Google OAuth, Telegram, GitHub)
+docker compose up --build
+```
+
 // Testing github sync

@@ -9,6 +9,7 @@ function resolveBackendUrl(): string {
 const backendUrl = resolveBackendUrl();
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   async rewrites() {
     return [
       {
