@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { syncKnowledgeInboxOnce } from "@/lib/knowledge-sync";
-import type { ProcessInboxResult, RawItem } from "@/lib/types";
+import type { GithubSyncResult, ProcessInboxResult, RawItem } from "@/lib/types";
 
 export function KnowledgeSection() {
   const [items, setItems] = useState<RawItem[]>([]);
@@ -24,6 +24,10 @@ export function KnowledgeSection() {
     null,
   );
   const [processError, setProcessError] = useState<string | null>(null);
+  const [githubSyncing, setGithubSyncing] = useState(false);
+  const [githubSyncResult, setGithubSyncResult] =
+    useState<GithubSyncResult | null>(null);
+  const [githubSyncError, setGithubSyncError] = useState<string | null>(null);
 
   async function fetchInbox() {
     const response = await fetch("/knowledge/inbox");
@@ -93,6 +97,36 @@ export function KnowledgeSection() {
     }
   }
 
+  async function handleSyncGithub() {
+    setGithubSyncing(true);
+    setGithubSyncError(null);
+    setGithubSyncResult(null);
+
+    try {
+      const githubResponse = await fetch("/knowledge/sync-github", {
+        method: "POST",
+      });
+      if (!githubResponse.ok) {
+        throw new Error(`GitHub sync failed (${githubResponse.status})`);
+      }
+      const result = (await githubResponse.json()) as GithubSyncResult;
+      setGithubSyncResult(result);
+
+      const syncResponse = await fetch("/knowledge/sync", { method: "POST" });
+      if (!syncResponse.ok) {
+        throw new Error(`Inbox sync failed (${syncResponse.status})`);
+      }
+
+      await fetchInbox();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to sync GitHub";
+      setGithubSyncError(message);
+    } finally {
+      setGithubSyncing(false);
+    }
+  }
+
   const unprocessedCount = items.filter((item) => !item.processed).length;
 
   return (
@@ -106,13 +140,23 @@ export function KnowledgeSection() {
             Captured items awaiting processing
           </CardDescription>
         </div>
-        <Button
-          size="sm"
-          onClick={() => void handleProcessInbox()}
-          disabled={processing || syncing || unprocessedCount === 0}
-        >
-          {processing ? "Processing…" : "Process Inbox"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void handleSyncGithub()}
+            disabled={githubSyncing || syncing}
+          >
+            {githubSyncing ? "Syncing GitHub…" : "Sync GitHub"}
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => void handleProcessInbox()}
+            disabled={processing || syncing || unprocessedCount === 0}
+          >
+            {processing ? "Processing…" : "Process Inbox"}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {syncing && (
@@ -145,6 +189,41 @@ export function KnowledgeSection() {
           <Alert variant="destructive">
             <AlertTitle>Processing failed</AlertTitle>
             <AlertDescription>{processError}</AlertDescription>
+          </Alert>
+        )}
+
+        {githubSyncError && (
+          <Alert variant="destructive">
+            <AlertTitle>GitHub sync failed</AlertTitle>
+            <AlertDescription>{githubSyncError}</AlertDescription>
+          </Alert>
+        )}
+
+        {githubSyncResult && githubSyncResult.failures.length > 0 && (
+          <Alert variant="destructive">
+            <AlertTitle>
+              {githubSyncResult.failures.length} repo
+              {githubSyncResult.failures.length === 1 ? "" : "s"} failed to
+              sync
+            </AlertTitle>
+            <AlertDescription>
+              <ul className="list-disc space-y-1 pl-4">
+                {githubSyncResult.failures.map((failure) => (
+                  <li key={failure.repoUrl}>
+                    {failure.repoUrl}: {failure.reason}
+                  </li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {githubSyncResult && githubSyncResult.filesWritten > 0 && (
+          <Alert>
+            <AlertTitle>
+              Synced {githubSyncResult.filesWritten} GitHub raw file(s) from{" "}
+              {githubSyncResult.reposChecked} repo(s)
+            </AlertTitle>
           </Alert>
         )}
 

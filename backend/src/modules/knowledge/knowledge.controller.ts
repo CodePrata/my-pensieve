@@ -6,6 +6,7 @@ import {
   Logger,
   Post,
 } from '@nestjs/common';
+import { GithubImportService } from './github-import.service';
 import { KnowledgeService } from './knowledge.service';
 import { WikiGeneratorService } from './wiki-generator.service';
 
@@ -16,6 +17,7 @@ export class KnowledgeController {
   constructor(
     private readonly knowledgeService: KnowledgeService,
     private readonly wikiGeneratorService: WikiGeneratorService,
+    private readonly githubImportService: GithubImportService,
   ) {}
 
   @Post('sync')
@@ -40,6 +42,25 @@ export class KnowledgeController {
   @Get('inbox')
   getInbox() {
     return this.knowledgeService.getInbox();
+  }
+
+  @Post('sync-github')
+  async syncGithub() {
+    try {
+      return await this.githubImportService.syncGithubSources();
+    } catch (error) {
+      const detail =
+        error instanceof Error ? error.message : 'Unknown GitHub sync error';
+      this.logger.error(`GitHub Knowledge Inbox sync failed: ${detail}`);
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.BAD_GATEWAY,
+          message: 'GitHub Knowledge Inbox sync failed',
+          error: detail,
+        },
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
   }
 
   @Post('process')

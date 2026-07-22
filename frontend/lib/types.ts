@@ -80,6 +80,17 @@ export interface ProcessInboxResult {
   failures: ProcessInboxFailure[];
 }
 
+export interface GithubSyncFailure {
+  repoUrl: string;
+  reason: string;
+}
+
+export interface GithubSyncResult {
+  reposChecked: number;
+  filesWritten: number;
+  failures: GithubSyncFailure[];
+}
+
 export interface HydratedPriorityBase {
   id: string;
   title: string;
