@@ -30,3 +30,5 @@ npm run dev
 ```
 
 Copy `capture-bot/.env.example` to `capture-bot/.env` and fill in the required values before starting.
+
+// Testing github sync
