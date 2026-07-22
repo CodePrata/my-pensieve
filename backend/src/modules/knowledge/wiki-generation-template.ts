@@ -42,7 +42,6 @@ Respond with ONLY minified JSON, no prose, no code fences, in exactly one of the
 
 export function parseWikiGenerationResponse(
   raw: string,
-  existingTitles: string[],
 ): WikiGenerationDecision {
   let parsed: unknown;
   try {
@@ -71,17 +70,9 @@ export function parseWikiGenerationResponse(
   }
 
   if (action === 'append') {
-    const match = existingTitles.find(
-      (existing) => existing.toLowerCase() === title.toLowerCase(),
-    );
-    if (!match) {
-      throw new Error(
-        `Ollama selected an append title not in the existing list: "${title}"`,
-      );
-    }
     return {
       action: 'append',
-      title: match,
+      title: title.trim(),
       summary: typeof summary === 'string' ? summary : null,
     };
   }

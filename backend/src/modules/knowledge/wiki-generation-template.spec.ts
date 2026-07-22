@@ -30,20 +30,18 @@ describe('buildWikiGenerationPrompt', () => {
 });
 
 describe('parseWikiGenerationResponse', () => {
-  const existingTitles = ['Networking Basics', 'Prisma Migrations'];
-
-  it('parses a valid append decision matching an existing title case-insensitively', () => {
+  it('parses a valid append decision without resolving titles', () => {
     const response = JSON.stringify({
       action: 'append',
       title: 'networking basics',
       summary: 'Refreshed summary.',
     });
 
-    const decision = parseWikiGenerationResponse(response, existingTitles);
+    const decision = parseWikiGenerationResponse(response);
 
     expect(decision).toEqual({
       action: 'append',
-      title: 'Networking Basics',
+      title: 'networking basics',
       summary: 'Refreshed summary.',
     });
   });
@@ -54,7 +52,7 @@ describe('parseWikiGenerationResponse', () => {
       title: 'Networking Basics',
     });
 
-    const decision = parseWikiGenerationResponse(response, existingTitles);
+    const decision = parseWikiGenerationResponse(response);
 
     expect(decision.summary).toBeNull();
   });
@@ -66,7 +64,7 @@ describe('parseWikiGenerationResponse', () => {
       summary: 'A summary of ownership semantics.',
     });
 
-    const decision = parseWikiGenerationResponse(response, existingTitles);
+    const decision = parseWikiGenerationResponse(response);
 
     expect(decision).toEqual({
       action: 'new',
@@ -76,26 +74,15 @@ describe('parseWikiGenerationResponse', () => {
   });
 
   it('throws when the response is not valid JSON', () => {
-    expect(() =>
-      parseWikiGenerationResponse('not json at all', existingTitles),
-    ).toThrow(/not valid JSON/);
-  });
-
-  it('throws when append selects a title outside the existing list', () => {
-    const response = JSON.stringify({
-      action: 'append',
-      title: 'Some Unknown Page',
-    });
-
-    expect(() => parseWikiGenerationResponse(response, existingTitles)).toThrow(
-      /not in the existing list/,
+    expect(() => parseWikiGenerationResponse('not json at all')).toThrow(
+      /not valid JSON/,
     );
   });
 
   it('throws when a new-page decision is missing a summary', () => {
     const response = JSON.stringify({ action: 'new', title: 'New Topic' });
 
-    expect(() => parseWikiGenerationResponse(response, existingTitles)).toThrow(
+    expect(() => parseWikiGenerationResponse(response)).toThrow(
       /missing a summary/,
     );
   });
@@ -103,7 +90,7 @@ describe('parseWikiGenerationResponse', () => {
   it('throws on an unrecognized action', () => {
     const response = JSON.stringify({ action: 'delete', title: 'X' });
 
-    expect(() => parseWikiGenerationResponse(response, existingTitles)).toThrow(
+    expect(() => parseWikiGenerationResponse(response)).toThrow(
       /unrecognized action/,
     );
   });

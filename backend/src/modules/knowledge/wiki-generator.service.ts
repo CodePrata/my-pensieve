@@ -31,6 +31,103 @@ export interface ProcessInboxResult {
   failures: ProcessInboxFailure[];
 }
 
+interface ExistingWikiPageRef {
+  title: string;
+  filePath: string;
+}
+
+/** Strips `.md`, punctuation, and extra whitespace for loose title comparison. */
+export function normalizeWikiTitleForMatch(value: string): string {
+  return value
+    .trim()
+    .replace(/\.md$/i, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+export function resolveAppendTargetTitle(
+  ollamaTitle: string,
+  existingPages: ExistingWikiPageRef[],
+): string | null {
+  const trimmed = ollamaTitle.trim();
+
+  const exactMatch = existingPages.find(
+    (page) => page.title.toLowerCase() === trimmed.toLowerCase(),
+  );
+  if (exactMatch) {
+    return exactMatch.title;
+  }
+
+  const normalizedOllama = normalizeWikiTitleForMatch(trimmed);
+  if (!normalizedOllama) {
+    return null;
+  }
+
+  const normalizedExactTitleMatch = existingPages.find(
+    (page) => normalizeWikiTitleForMatch(page.title) === normalizedOllama,
+  );
+  if (normalizedExactTitleMatch) {
+    return normalizedExactTitleMatch.title;
+  }
+
+  const normalizedBasenameMatch = existingPages.find(
+    (page) =>
+      normalizeWikiTitleForMatch(path.basename(page.filePath, '.md')) ===
+      normalizedOllama,
+  );
+  if (normalizedBasenameMatch) {
+    return normalizedBasenameMatch.title;
+  }
+
+  const prefixMatches = existingPages.filter((page) => {
+    const normalizedTitle = normalizeWikiTitleForMatch(page.title);
+    const normalizedBasename = normalizeWikiTitleForMatch(
+      path.basename(page.filePath, '.md'),
+    );
+    return (
+      normalizedTitleMatchesLoosely(normalizedOllama, normalizedTitle) ||
+      normalizedTitleMatchesLoosely(normalizedOllama, normalizedBasename)
+    );
+  });
+
+  if (prefixMatches.length === 1) {
+    return prefixMatches[0].title;
+  }
+
+  if (prefixMatches.length > 1) {
+    const bestMatch = prefixMatches.reduce((best, page) => {
+      const bestKey = Math.max(
+        normalizeWikiTitleForMatch(best.title).length,
+        normalizeWikiTitleForMatch(path.basename(best.filePath, '.md')).length,
+      );
+      const pageKey = Math.max(
+        normalizeWikiTitleForMatch(page.title).length,
+        normalizeWikiTitleForMatch(path.basename(page.filePath, '.md')).length,
+      );
+      return pageKey > bestKey ? page : best;
+    });
+    return bestMatch.title;
+  }
+
+  return null;
+}
+
+function normalizedTitleMatchesLoosely(
+  normalizedOllama: string,
+  normalizedCandidate: string,
+): boolean {
+  if (!normalizedCandidate) {
+    return false;
+  }
+
+  return (
+    normalizedOllama === normalizedCandidate ||
+    normalizedOllama.startsWith(`${normalizedCandidate} `)
+  );
+}
+
 @Injectable()
 export class WikiGeneratorService {
   private readonly logger = new Logger(WikiGeneratorService.name);
@@ -105,7 +202,11 @@ export class WikiGeneratorService {
         : undefined,
     );
     const rawResponse = await this.ollamaClient.generate(prompt);
-    const decision = parseWikiGenerationResponse(rawResponse, existingTitles);
+    const parsedDecision = parseWikiGenerationResponse(rawResponse);
+    const decision =
+      parsedDecision.action === 'append'
+        ? this.resolveAppendDecision(parsedDecision, existingPages)
+        : parsedDecision;
 
     const now = new Date();
     const dateStamp = now.toISOString().slice(0, 10);
@@ -185,6 +286,23 @@ export class WikiGeneratorService {
       where: { id: rawItem.id },
       data: { processed: true },
     });
+  }
+
+  private resolveAppendDecision(
+    decision: { action: 'append'; title: string; summary: string | null },
+    existingPages: { id: string; title: string; filePath: string }[],
+  ): { action: 'append'; title: string; summary: string | null } {
+    const resolvedTitle = resolveAppendTargetTitle(
+      decision.title,
+      existingPages,
+    );
+    if (!resolvedTitle) {
+      throw new Error(
+        `Ollama selected an append title not in the existing list: "${decision.title}"`,
+      );
+    }
+
+    return { ...decision, title: resolvedTitle };
   }
 
   private async resolveProjectWikiContext(rawItem: {

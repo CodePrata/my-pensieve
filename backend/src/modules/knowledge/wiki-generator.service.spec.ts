@@ -2,7 +2,11 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs/promises';
 import { PrismaService } from '../../prisma/prisma.service';
 import { VaultWriterService } from './vault-writer.service';
-import { WikiGeneratorService } from './wiki-generator.service';
+import {
+  normalizeWikiTitleForMatch,
+  resolveAppendTargetTitle,
+  WikiGeneratorService,
+} from './wiki-generator.service';
 
 jest.mock('fs/promises');
 
@@ -230,6 +234,77 @@ describe('WikiGeneratorService', () => {
     });
     expect(prisma.wikiPageSource.create).toHaveBeenCalledWith({
       data: { rawItemId: 'raw-2', wikiPageId: 'wiki-9' },
+    });
+  });
+
+  it.each([
+    ['My Pensieve Overview', 'My Pensieve'],
+    ['My-Pensieve', 'My Pensieve'],
+    ['My Pensieve Overview.md', 'My Pensieve'],
+  ])(
+    'loosely matches append title "%s" to canonical title "%s"',
+    async (ollamaTitle, canonicalTitle) => {
+      prisma.rawItem.findMany.mockResolvedValue([
+        {
+          id: 'raw-loose',
+          rawFilePath: 'raw/github/user-my-pensieve-20260103.md',
+          sourceType: 'github',
+          sourceUrl: 'https://github.com/user/my-pensieve',
+        },
+      ]);
+      prisma.project.findFirst.mockResolvedValue({
+        name: 'My Pensieve',
+        repoUrl: 'https://github.com/user/my-pensieve',
+      });
+      prisma.wikiPage.findMany.mockResolvedValue([
+        {
+          id: 'wiki-index',
+          title: canonicalTitle,
+          filePath: 'wiki/my-pensieve/My-Pensieve.md',
+        },
+      ]);
+      ollamaClient.generate.mockResolvedValue(
+        JSON.stringify({ action: 'append', title: ollamaTitle }),
+      );
+
+      const result = await service.processInbox();
+
+      expect(result).toEqual({ processed: 1, failed: 0, failures: [] });
+      expect(vaultWriter.appendWikiFile).toHaveBeenCalledWith(
+        '/vault',
+        'wiki/my-pensieve/My-Pensieve.md',
+        expect.stringContaining('Captured body text'),
+      );
+      expect(prisma.wikiPage.update).toHaveBeenCalledWith({
+        where: { id: 'wiki-index' },
+        data: { lastUpdatedAt: expect.any(Date) as Date },
+      });
+    },
+  );
+
+  describe('resolveAppendTargetTitle', () => {
+    const projectIndexPage = {
+      title: 'My Pensieve',
+      filePath: 'wiki/my-pensieve/My-Pensieve.md',
+    };
+
+    it('normalizes titles by stripping extensions, punctuation, and casing', () => {
+      expect(normalizeWikiTitleForMatch('My Pensieve Overview.md')).toBe(
+        'my pensieve overview',
+      );
+      expect(normalizeWikiTitleForMatch('My-Pensieve')).toBe('my pensieve');
+    });
+
+    it('resolves variant append titles to the canonical wiki page title', () => {
+      expect(
+        resolveAppendTargetTitle('My Pensieve Overview', [projectIndexPage]),
+      ).toBe('My Pensieve');
+      expect(resolveAppendTargetTitle('My-Pensieve', [projectIndexPage])).toBe(
+        'My Pensieve',
+      );
+      expect(
+        resolveAppendTargetTitle('My Pensieve Overview.md', [projectIndexPage]),
+      ).toBe('My Pensieve');
     });
   });
 
