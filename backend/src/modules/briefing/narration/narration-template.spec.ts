@@ -85,7 +85,9 @@ describe('buildOllamaPrompt', () => {
     );
 
     const inputDataIndex = prompt.indexOf('Input data:');
-    const focusInstructionIndex = prompt.indexOf('FINAL INSTRUCTION — Focus line');
+    const focusInstructionIndex = prompt.indexOf(
+      'FINAL INSTRUCTION — Focus line',
+    );
     expect(inputDataIndex).toBeGreaterThan(-1);
     expect(focusInstructionIndex).toBeGreaterThan(inputDataIndex);
     expect(prompt.trimEnd().endsWith('Now generate the briefing.')).toBe(true);
@@ -103,14 +105,10 @@ describe('buildOllamaPrompt', () => {
     expect(prompt).toContain(
       'Do NOT write a generic phrase like "Study and Projects"',
     );
-    expect(prompt).toContain(
-      'Do NOT use the empty-candidates phrasing',
-    );
+    expect(prompt).toContain('Do NOT use the empty-candidates phrasing');
     expect(prompt).toContain('it is NOT empty here');
     expect(prompt).toContain('candidates[0].title is "First"');
-    expect(prompt).toContain(
-      'Your primary focus should be on First.',
-    );
+    expect(prompt).toContain('Your primary focus should be on First.');
   });
 
   it('includes a worked example with a placeholder title', () => {
@@ -143,9 +141,9 @@ describe('buildOllamaPrompt', () => {
     expect(deriveTimeOfDay(morning)).toBe('Morning');
     expect(deriveTimeOfDay(afternoon)).toBe('Afternoon');
     expect(deriveTimeOfDay(evening)).toBe('Evening');
-    expect(buildOllamaPrompt([], emptyFreeTime(0), afternoon, 'Alex')).toContain(
-      '"timeOfDay": "Afternoon"',
-    );
+    expect(
+      buildOllamaPrompt([], emptyFreeTime(0), afternoon, 'Alex'),
+    ).toContain('"timeOfDay": "Afternoon"');
   });
 });
 

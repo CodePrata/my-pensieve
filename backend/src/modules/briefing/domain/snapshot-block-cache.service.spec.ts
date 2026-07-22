@@ -5,28 +5,28 @@ import { SnapshotBlockCacheService } from './snapshot-block-cache.service';
 describe('SnapshotBlockCacheService', () => {
   let service: SnapshotBlockCacheService;
   let prisma: jest.Mocked<Pick<PrismaService, 'briefingSnapshot'>>;
+  let findFirst: jest.Mock;
 
   beforeEach(() => {
+    findFirst = jest.fn();
     prisma = {
       briefingSnapshot: {
-        findFirst: jest.fn(),
+        findFirst,
       } as unknown as PrismaService['briefingSnapshot'],
     };
 
-    service = new SnapshotBlockCacheService(
-      prisma as unknown as PrismaService,
-    );
+    service = new SnapshotBlockCacheService(prisma as unknown as PrismaService);
   });
 
   it('returns null when no snapshot exists for today', async () => {
-    prisma.briefingSnapshot.findFirst.mockResolvedValue(null);
+    findFirst.mockResolvedValue(null);
 
     const result = await service.findSnapshotForCurrentBlock(
       atLocal(2026, 7, 8, 14, 0),
     );
 
     expect(result).toBeNull();
-    expect(prisma.briefingSnapshot.findFirst).toHaveBeenCalledWith({
+    expect(findFirst).toHaveBeenCalledWith({
       where: {
         date: startOfDay(atLocal(2026, 7, 8, 14, 0)),
       },
@@ -42,7 +42,7 @@ describe('SnapshotBlockCacheService', () => {
       generatedAt: atLocal(2026, 7, 8, 13, 15),
     });
 
-    prisma.briefingSnapshot.findFirst.mockResolvedValue(snapshot);
+    findFirst.mockResolvedValue(snapshot);
 
     const result = await service.findSnapshotForCurrentBlock(now);
 
@@ -55,7 +55,7 @@ describe('SnapshotBlockCacheService', () => {
       generatedAt: atLocal(2026, 7, 8, 9, 0),
     });
 
-    prisma.briefingSnapshot.findFirst.mockResolvedValue(snapshot);
+    findFirst.mockResolvedValue(snapshot);
 
     const result = await service.findSnapshotForCurrentBlock(now);
 
@@ -63,9 +63,7 @@ describe('SnapshotBlockCacheService', () => {
   });
 });
 
-function makeSnapshot(
-  overrides: Partial<BriefingSnapshot>,
-): BriefingSnapshot {
+function makeSnapshot(overrides: Partial<BriefingSnapshot>): BriefingSnapshot {
   return {
     id: 'snapshot-1',
     date: startOfDay(atLocal(2026, 7, 8, 0, 0)),

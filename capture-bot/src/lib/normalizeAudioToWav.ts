@@ -17,12 +17,27 @@ export async function normalizeAudioToWav(
   const ffmpegBin = config.ffmpegPath ?? 'ffmpeg';
 
   if (!config.ffmpegPath) {
-    console.error(`${LOG_PREFIX} FFMPEG_PATH is not set; falling back to "ffmpeg" on PATH`);
+    console.error(
+      `${LOG_PREFIX} FFMPEG_PATH is not set; falling back to "ffmpeg" on PATH`,
+    );
   }
 
-  const args = ['-y', '-i', inputPath, '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', outputPath];
+  const args = [
+    '-y',
+    '-i',
+    inputPath,
+    '-ar',
+    '16000',
+    '-ac',
+    '1',
+    '-c:a',
+    'pcm_s16le',
+    outputPath,
+  ];
 
-  console.log(`${LOG_PREFIX} ffmpeg: normalizing ${inputPath} -> ${outputPath}`);
+  console.log(
+    `${LOG_PREFIX} ffmpeg: normalizing ${inputPath} -> ${outputPath}`,
+  );
   console.log(`${LOG_PREFIX} ffmpeg: ${ffmpegBin} ${args.join(' ')}`);
 
   try {
@@ -42,10 +57,14 @@ export async function normalizeAudioToWav(
     return outputPath;
   } catch (err) {
     const error = err as Error & { stderr?: string; stdout?: string };
-    const combinedOutput = [error.message, error.stderr, error.stdout].filter(Boolean).join('\n');
+    const combinedOutput = [error.message, error.stderr, error.stdout]
+      .filter(Boolean)
+      .join('\n');
 
     if (isMissingAudioStreamError(combinedOutput)) {
-      console.log(`${LOG_PREFIX} No audio track found in video file — skipping transcription.`);
+      console.log(
+        `${LOG_PREFIX} No audio track found in video file — skipping transcription.`,
+      );
       return null;
     }
 

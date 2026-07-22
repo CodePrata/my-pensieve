@@ -57,11 +57,12 @@ describe('KnowledgeService', () => {
 
       expect(result).toEqual({ created: 1, skipped: 1 });
       expect(prisma.rawItem.create).toHaveBeenCalledTimes(1);
-      expect(prisma.rawItem.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          rawFilePath: 'raw/text/new-item.md',
-        }),
-      });
+      const createMock = prisma.rawItem.create;
+      const calls = createMock.mock.calls as Array<
+        [{ data: { rawFilePath: string } }]
+      >;
+      const createCall = calls[0][0];
+      expect(createCall.data.rawFilePath).toBe('raw/text/new-item.md');
     });
 
     it('does not touch already-processed rows — sync never updates existing rows', async () => {

@@ -1,8 +1,15 @@
 import { Context } from 'telegraf';
-import { writeRawFile, appendLog, filenameStemFromDate } from '../lib/vaultWriter';
+import {
+  writeRawFile,
+  appendLog,
+  filenameStemFromDate,
+} from '../lib/vaultWriter';
 import { CaptureResult } from '../types';
 
-export async function handleText(ctx: Context, vaultPath: string): Promise<void> {
+export async function handleText(
+  ctx: Context,
+  vaultPath: string,
+): Promise<void> {
   const message = ctx.message as { text?: string } | undefined;
   const body = message?.text ?? '';
   const capturedAt = new Date().toISOString();

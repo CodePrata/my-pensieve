@@ -1,6 +1,7 @@
 node_modules
 .env
-.env.local
+.env.*
+!.env.example
 
 .next
 
@@ -13,3 +14,12 @@ coverage
 .DS_Store
 
 *.log
+
+# ADR-007: Postgres volume data / any local data directory must never be committed
+/data
+
+# ADR-015 recon: generated Prisma client output (backend/prisma/schema.prisma generator.output)
+backend/generated/prisma
+
+# Obsidian vault (raw/, wiki/, log.md) lives outside the repo tree at OBSIDIAN_VAULT_PATH
+# (see backend/.env, capture-bot/.env) — no .gitignore entry needed for it.

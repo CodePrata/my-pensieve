@@ -7,7 +7,9 @@ import { getTimeBlock } from './time-block.util';
 export class SnapshotBlockCacheService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findSnapshotForCurrentBlock(now: Date): Promise<BriefingSnapshot | null> {
+  async findSnapshotForCurrentBlock(
+    now: Date,
+  ): Promise<BriefingSnapshot | null> {
     const snapshot = await this.prisma.briefingSnapshot.findFirst({
       where: {
         date: startOfDay(now),

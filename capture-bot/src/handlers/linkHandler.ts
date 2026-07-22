@@ -9,7 +9,11 @@ import {
   formatTikTokNote,
   isTikTokUrl,
 } from '../lib/tiktokOembed';
-import { writeRawFile, appendLog, filenameStemFromDate } from '../lib/vaultWriter';
+import {
+  writeRawFile,
+  appendLog,
+  filenameStemFromDate,
+} from '../lib/vaultWriter';
 import { guessSourceType } from '../lib/sourceTypeGuesser';
 import { VideoEnrichmentConfig } from '../lib/videoEnrichmentConfig';
 import { CaptureResult } from '../types';
@@ -29,8 +33,11 @@ async function extractMetadata(url: string): Promise<LinkMetadata> {
   const $ = cheerio.load(html);
 
   const title =
-    $('meta[property="og:title"]').attr('content') ?? $('title').first().text() ?? '';
-  const description = $('meta[property="og:description"]').attr('content') ?? '';
+    $('meta[property="og:title"]').attr('content') ??
+    $('title').first().text() ??
+    '';
+  const description =
+    $('meta[property="og:description"]').attr('content') ?? '';
   const image = $('meta[property="og:image"]').attr('content') ?? '';
 
   return { title, description, image };
@@ -92,12 +99,21 @@ export async function handleLink(
     body,
   );
 
-  const result: CaptureResult = { sourceType, rawFilePath, sourceUrl: url, capturedAt };
+  const result: CaptureResult = {
+    sourceType,
+    rawFilePath,
+    sourceUrl: url,
+    capturedAt,
+  };
   await appendLog(vaultPath, result);
 
   if (videoEnrichment && isVideoEnrichmentUrl(url)) {
     const absoluteNotePath = path.join(vaultPath, rawFilePath);
-    void enrichVideoNoteWithTranscript(absoluteNotePath, url, videoEnrichment).catch((err) => {
+    void enrichVideoNoteWithTranscript(
+      absoluteNotePath,
+      url,
+      videoEnrichment,
+    ).catch((err) => {
       console.error('[video-enrichment] Unhandled rejection:', err);
     });
   }

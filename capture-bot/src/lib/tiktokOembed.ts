@@ -38,7 +38,9 @@ export function formatBookmarkNote(url: string): string {
   return [`# ${url}`, '', url].join('\n');
 }
 
-export async function fetchTikTokOembed(url: string): Promise<TikTokOembedData | null> {
+export async function fetchTikTokOembed(
+  url: string,
+): Promise<TikTokOembedData | null> {
   const oembedUrl = `${TIKTOK_OEMBED_BASE}?url=${encodeURIComponent(url)}`;
 
   try {
@@ -51,8 +53,10 @@ export async function fetchTikTokOembed(url: string): Promise<TikTokOembedData |
 
     const json = (await response.json()) as Record<string, unknown>;
     const title = typeof json.title === 'string' ? json.title : '';
-    const author_name = typeof json.author_name === 'string' ? json.author_name : '';
-    const author_url = typeof json.author_url === 'string' ? json.author_url : '';
+    const author_name =
+      typeof json.author_name === 'string' ? json.author_name : '';
+    const author_url =
+      typeof json.author_url === 'string' ? json.author_url : '';
 
     if (!title && !author_name) {
       return null;

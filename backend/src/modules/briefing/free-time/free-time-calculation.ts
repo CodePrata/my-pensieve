@@ -46,9 +46,7 @@ function clipEventToRange(
   const eventStart = new Date(event.startTime);
   const eventEnd = new Date(event.endTime);
 
-  const start = new Date(
-    Math.max(eventStart.getTime(), rangeStart.getTime()),
-  );
+  const start = new Date(Math.max(eventStart.getTime(), rangeStart.getTime()));
   const end = new Date(Math.min(eventEnd.getTime(), rangeEnd.getTime()));
 
   if (start.getTime() >= end.getTime()) {

@@ -11,12 +11,16 @@ export function deriveFfprobePathFromFfmpeg(ffmpegPath: string): string {
   return ffmpegPath.replace(/ffmpeg(\.exe)?$/i, 'ffprobe$1');
 }
 
-export function resolveFfmpegTools(ffmpegPath?: string, ffprobePath?: string): FfmpegToolPaths {
+export function resolveFfmpegTools(
+  ffmpegPath?: string,
+  ffprobePath?: string,
+): FfmpegToolPaths {
   if (!ffmpegPath) {
     return { ffprobePath };
   }
 
-  const resolvedFfprobe = ffprobePath ?? deriveFfprobePathFromFfmpeg(ffmpegPath);
+  const resolvedFfprobe =
+    ffprobePath ?? deriveFfprobePathFromFfmpeg(ffmpegPath);
   const ffmpegLocation = path.dirname(ffmpegPath);
 
   return {

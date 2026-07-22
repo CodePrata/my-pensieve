@@ -1,4 +1,11 @@
-import { Controller, Get, HttpException, HttpStatus, Logger, Post } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpException,
+  HttpStatus,
+  Logger,
+  Post,
+} from '@nestjs/common';
 import { BriefingService } from './briefing.service';
 import { CandidateAggregatorService } from './domain/candidate-aggregator.service';
 import { HydratedPriority } from './domain/priority-candidate.interface';

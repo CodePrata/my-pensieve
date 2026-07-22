@@ -33,10 +33,7 @@ export class GoogleOAuthStrategy extends PassportStrategy(
       clientID: configService.get<string>('GOOGLE_CLIENT_ID'),
       clientSecret: configService.get<string>('GOOGLE_CLIENT_SECRET'),
       callbackURL: configService.get<string>('GOOGLE_REDIRECT_URI'),
-      scope: [
-        'https://www.googleapis.com/auth/calendar.readonly',
-        'profile',
-      ],
+      scope: ['https://www.googleapis.com/auth/calendar.readonly', 'profile'],
     } as StrategyOptions);
   }
 

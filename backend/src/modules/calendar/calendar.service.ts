@@ -191,10 +191,7 @@ export class CalendarService {
 
     const googleEvents: calendar_v3.Schema$Event[] = [];
     for (const entry of syncableCalendars) {
-      const events = await this.fetchGoogleCalendarEvents(
-        calendar,
-        entry.id!,
-      );
+      const events = await this.fetchGoogleCalendarEvents(calendar, entry.id!);
       googleEvents.push(...events);
       this.logger.log(
         `Fetched ${events.length} event(s) from calendar "${entry.summary ?? entry.id}"`,
@@ -266,16 +263,12 @@ export class CalendarService {
 
     const syncable = entries.filter(
       (entry) =>
-        entry.id &&
-        !entry.deleted &&
-        entry.accessRole !== EXCLUDED_ACCESS_ROLE,
+        entry.id && !entry.deleted && entry.accessRole !== EXCLUDED_ACCESS_ROLE,
     );
 
     const skipped = entries.filter(
       (entry) =>
-        entry.id &&
-        !entry.deleted &&
-        entry.accessRole === EXCLUDED_ACCESS_ROLE,
+        entry.id && !entry.deleted && entry.accessRole === EXCLUDED_ACCESS_ROLE,
     );
 
     for (const entry of syncable) {
@@ -322,10 +315,7 @@ export class CalendarService {
     return events;
   }
 
-  private mapGoogleEvent(
-    event: calendar_v3.Schema$Event,
-    lastSyncedAt: Date,
-  ) {
+  private mapGoogleEvent(event: calendar_v3.Schema$Event, lastSyncedAt: Date) {
     const allDay = Boolean(event.start?.date && !event.start?.dateTime);
     const { startTime, endTime } = allDay
       ? this.parseAllDayTimes(event.start!.date!, event.end!.date!)

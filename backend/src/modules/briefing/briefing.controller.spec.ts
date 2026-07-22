@@ -137,7 +137,15 @@ describe('BriefingController', () => {
 
   describe('POST /briefing/push', () => {
     const fullBriefingPayload = {
-      data: { priorities: [], freeTime: { windows: [], totalFreeMinutes: 0, largestWindowMinutes: 0, windowCount: 0 } },
+      data: {
+        priorities: [],
+        freeTime: {
+          windows: [],
+          totalFreeMinutes: 0,
+          largestWindowMinutes: 0,
+          windowCount: 0,
+        },
+      },
       narration: 'Good morning.',
       degraded: false,
       degradedReason: null,
@@ -163,9 +171,12 @@ describe('BriefingController', () => {
         new TelegramAuthFailedError('bad token'),
       );
 
-      await expect(controller.pushBriefing()).rejects.toMatchObject({
-        status: 401,
-        response: expect.objectContaining({ errorType: 'telegram_auth_failed' }),
+      const error = await controller
+        .pushBriefing()
+        .catch((caught: unknown) => caught);
+      expect(error).toMatchObject({ status: 401 });
+      expect((error as HttpException).getResponse()).toMatchObject({
+        errorType: 'telegram_auth_failed',
       });
     });
 
@@ -177,11 +188,12 @@ describe('BriefingController', () => {
         new TelegramChatNotFoundError('no chat'),
       );
 
-      await expect(controller.pushBriefing()).rejects.toMatchObject({
-        status: 404,
-        response: expect.objectContaining({
-          errorType: 'telegram_chat_not_found',
-        }),
+      const error = await controller
+        .pushBriefing()
+        .catch((caught: unknown) => caught);
+      expect(error).toMatchObject({ status: 404 });
+      expect((error as HttpException).getResponse()).toMatchObject({
+        errorType: 'telegram_chat_not_found',
       });
     });
 
@@ -193,9 +205,12 @@ describe('BriefingController', () => {
         new TelegramTransientError('network down'),
       );
 
-      await expect(controller.pushBriefing()).rejects.toMatchObject({
-        status: 502,
-        response: expect.objectContaining({ errorType: 'transient' }),
+      const error = await controller
+        .pushBriefing()
+        .catch((caught: unknown) => caught);
+      expect(error).toMatchObject({ status: 502 });
+      expect((error as HttpException).getResponse()).toMatchObject({
+        errorType: 'transient',
       });
     });
 

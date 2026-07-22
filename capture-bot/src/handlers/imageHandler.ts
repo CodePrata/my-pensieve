@@ -1,7 +1,11 @@
 import { Context } from 'telegraf';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { writeRawFile, appendLog, filenameStemFromDate } from '../lib/vaultWriter';
+import {
+  writeRawFile,
+  appendLog,
+  filenameStemFromDate,
+} from '../lib/vaultWriter';
 import { captionImage } from '../lib/ollamaClient';
 import { CaptureResult } from '../types';
 
@@ -11,7 +15,8 @@ export async function handleImage(
   ollamaBaseUrl: string,
   visionModel: string,
 ): Promise<void> {
-  const message = ctx.message as { photo?: Array<{ file_id: string }> } | undefined;
+  const message = ctx.message as
+    { photo?: Array<{ file_id: string }> } | undefined;
   const photoSizes = message?.photo ?? [];
   const largestPhoto = photoSizes[photoSizes.length - 1];
 
@@ -22,7 +27,10 @@ export async function handleImage(
   const capturedAt = new Date().toISOString();
   const filenameStem = filenameStemFromDate(new Date(capturedAt));
 
-  const imageRelativePath = path.join('raw', 'screenshot', `${filenameStem}.jpg`).split(path.sep).join('/');
+  const imageRelativePath = path
+    .join('raw', 'screenshot', `${filenameStem}.jpg`)
+    .split(path.sep)
+    .join('/');
   const imageAbsoluteDir = path.join(vaultPath, 'raw', 'screenshot');
   await fs.mkdir(imageAbsoluteDir, { recursive: true });
   await fs.writeFile(path.join(vaultPath, imageRelativePath), imageBuffer);
@@ -51,7 +59,11 @@ export async function handleImage(
     caption,
   );
 
-  const result: CaptureResult = { sourceType: 'screenshot', rawFilePath, capturedAt };
+  const result: CaptureResult = {
+    sourceType: 'screenshot',
+    rawFilePath,
+    capturedAt,
+  };
   await appendLog(vaultPath, result);
 
   await ctx.reply(

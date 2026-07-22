@@ -15,7 +15,13 @@ function runFfprobe(
       { encoding: 'utf-8', timeout: PROBE_TIMEOUT_MS },
       (error, stdout, stderr) => {
         if (error) {
-          reject(error);
+          reject(
+            error instanceof Error
+              ? error
+              : new Error(
+                  typeof error === 'string' ? error : 'ffprobe command failed',
+                ),
+          );
           return;
         }
         resolve({ stdout: stdout ?? '', stderr: stderr ?? '' });
@@ -34,7 +40,9 @@ export async function hasAudioStream(
 ): Promise<boolean> {
   const ffprobeBin = config.ffprobePath ?? 'ffprobe';
 
-  console.log(`${LOG_PREFIX} ffprobe: checking for audio stream in ${mediaPath}`);
+  console.log(
+    `${LOG_PREFIX} ffprobe: checking for audio stream in ${mediaPath}`,
+  );
 
   try {
     const { stdout, stderr } = await runFfprobe(ffprobeBin, [
@@ -53,12 +61,19 @@ export async function hasAudioStream(
       console.log(`${LOG_PREFIX} ffprobe stderr:\n${stderr}`);
     }
 
-    const hasAudio = stdout.trim().split('\n').some((line) => line.trim() === 'audio');
-    console.log(`${LOG_PREFIX} ffprobe: audio stream ${hasAudio ? 'found' : 'not found'} in ${mediaPath}`);
+    const hasAudio = stdout
+      .trim()
+      .split('\n')
+      .some((line) => line.trim() === 'audio');
+    console.log(
+      `${LOG_PREFIX} ffprobe: audio stream ${hasAudio ? 'found' : 'not found'} in ${mediaPath}`,
+    );
     return hasAudio;
   } catch (err) {
     const error = err as Error & { stderr?: string; stdout?: string };
-    console.log(`${LOG_PREFIX} ffprobe: no audio stream detected in ${mediaPath} (${error.message})`);
+    console.log(
+      `${LOG_PREFIX} ffprobe: no audio stream detected in ${mediaPath} (${error.message})`,
+    );
     if (error.stderr) {
       console.log(`${LOG_PREFIX} ffprobe stderr:\n${error.stderr}`);
     }

@@ -42,7 +42,7 @@ describe('CalendarController', () => {
 
       const error = (await controller
         .syncEvents()
-        .catch((caught) => caught)) as HttpException;
+        .catch((caught: unknown) => caught)) as HttpException;
 
       expect(error).toBeInstanceOf(HttpException);
       expect(error.getStatus()).toBe(HttpStatus.BAD_GATEWAY);
@@ -66,7 +66,7 @@ describe('CalendarController', () => {
 
       const error = (await controller
         .syncEvents()
-        .catch((caught) => caught)) as HttpException;
+        .catch((caught: unknown) => caught)) as HttpException;
 
       expect(error).toBeInstanceOf(HttpException);
       expect(error.getStatus()).toBe(HttpStatus.BAD_GATEWAY);

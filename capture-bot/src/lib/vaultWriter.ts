@@ -3,7 +3,10 @@ import * as path from 'path';
 import { CaptureResult, SourceType } from '../types';
 
 export function filenameStemFromDate(date: Date): string {
-  return date.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[:-]/g, '');
+  return date
+    .toISOString()
+    .replace(/\.\d{3}Z$/, 'Z')
+    .replace(/[:-]/g, '');
 }
 
 function toFrontmatterYaml(frontmatter: Record<string, unknown>): string {
@@ -11,7 +14,7 @@ function toFrontmatterYaml(frontmatter: Record<string, unknown>): string {
     if (typeof value === 'string') {
       return `${key}: ${JSON.stringify(value)}`;
     }
-    return `${key}: ${value}`;
+    return `${key}: ${JSON.stringify(value)}`;
   });
   return `---\n${lines.join('\n')}\n---\n`;
 }
@@ -36,7 +39,10 @@ export async function writeRawFile(
   return relativeFilePath.split(path.sep).join('/');
 }
 
-export async function appendLog(vaultPath: string, entry: CaptureResult): Promise<void> {
+export async function appendLog(
+  vaultPath: string,
+  entry: CaptureResult,
+): Promise<void> {
   const logPath = path.join(vaultPath, 'log.md');
   const sourceUrlSuffix = entry.sourceUrl ? ` (${entry.sourceUrl})` : '';
   const line = `- [${entry.capturedAt}] ${entry.sourceType} — ${entry.rawFilePath}${sourceUrlSuffix}\n`;

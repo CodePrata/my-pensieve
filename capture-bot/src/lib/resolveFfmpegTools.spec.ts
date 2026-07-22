@@ -1,17 +1,26 @@
 import * as path from 'path';
-import { deriveFfprobePathFromFfmpeg, resolveFfmpegTools } from './resolveFfmpegTools';
+import {
+  deriveFfprobePathFromFfmpeg,
+  resolveFfmpegTools,
+} from './resolveFfmpegTools';
 
 describe('resolveFfmpegTools', () => {
   it('derives ffprobe path from ffmpeg on Windows', () => {
-    expect(deriveFfprobePathFromFfmpeg('C:/tools/ffmpeg.exe')).toBe('C:/tools/ffprobe.exe');
+    expect(deriveFfprobePathFromFfmpeg('C:/tools/ffmpeg.exe')).toBe(
+      'C:/tools/ffprobe.exe',
+    );
   });
 
   it('resolves ffmpegLocation as the directory containing both binaries', () => {
     expect(
-      resolveFfmpegTools('C:/Users/Admin/AppData/Local/Microsoft/WinGet/Links/ffmpeg.exe'),
+      resolveFfmpegTools(
+        'C:/Users/Admin/AppData/Local/Microsoft/WinGet/Links/ffmpeg.exe',
+      ),
     ).toEqual({
-      ffmpegPath: 'C:/Users/Admin/AppData/Local/Microsoft/WinGet/Links/ffmpeg.exe',
-      ffprobePath: 'C:/Users/Admin/AppData/Local/Microsoft/WinGet/Links/ffprobe.exe',
+      ffmpegPath:
+        'C:/Users/Admin/AppData/Local/Microsoft/WinGet/Links/ffmpeg.exe',
+      ffprobePath:
+        'C:/Users/Admin/AppData/Local/Microsoft/WinGet/Links/ffprobe.exe',
       ffmpegLocation: 'C:/Users/Admin/AppData/Local/Microsoft/WinGet/Links',
     });
   });

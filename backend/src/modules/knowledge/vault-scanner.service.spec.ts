@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import type { PathLike } from 'fs';
 import { VaultScannerService } from './vault-scanner.service';
 
 jest.mock('fs/promises');
@@ -22,45 +23,55 @@ describe('VaultScannerService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     configService.get.mockReturnValue('/vault');
-    service = new VaultScannerService(configService as unknown as ConfigService);
+    service = new VaultScannerService(
+      configService as unknown as ConfigService,
+    );
   });
 
   it('recursively finds .md files under raw/ and parses their frontmatter', async () => {
-    mockedFs.readdir.mockImplementation(async (dir) => {
+    mockedFs.readdir.mockImplementation((dir) => {
       const dirStr = dir.toString();
       if (dirStr === path.join('/vault', 'raw')) {
-        return [dirent('text', true), dirent('screenshot', true)] as never;
+        return Promise.resolve([
+          dirent('text', true),
+          dirent('screenshot', true),
+        ] as never);
       }
       if (dirStr === path.join('/vault', 'raw', 'text')) {
-        return [dirent('note.md', false)] as never;
+        return Promise.resolve([dirent('note.md', false)] as never);
       }
       if (dirStr === path.join('/vault', 'raw', 'screenshot')) {
-        return [dirent('shot.md', false)] as never;
+        return Promise.resolve([dirent('shot.md', false)] as never);
       }
-      return [] as never;
+      return Promise.resolve([] as never);
     });
 
-    mockedFs.readFile.mockImplementation(async (filePath) => {
-      const pathStr = filePath.toString();
+    mockedFs.readFile.mockImplementation((filePath: PathLike) => {
+      const pathStr =
+        typeof filePath === 'string' ? filePath : filePath.toString();
       if (pathStr.endsWith('note.md')) {
-        return [
+        return Promise.resolve(
+          [
+            '---',
+            'sourceType: "text"',
+            'captureMethod: "capture_bot"',
+            'capturedAt: "2026-07-20T10:00:00.000Z"',
+            '---',
+            'Body content',
+          ].join('\n'),
+        );
+      }
+      return Promise.resolve(
+        [
           '---',
-          'sourceType: "text"',
+          'sourceType: "screenshot"',
           'captureMethod: "capture_bot"',
-          'capturedAt: "2026-07-20T10:00:00.000Z"',
+          'sourceUrl: "https://example.com"',
+          'capturedAt: "2026-07-19T08:00:00.000Z"',
           '---',
           'Body content',
-        ].join('\n');
-      }
-      return [
-        '---',
-        'sourceType: "screenshot"',
-        'captureMethod: "capture_bot"',
-        'sourceUrl: "https://example.com"',
-        'capturedAt: "2026-07-19T08:00:00.000Z"',
-        '---',
-        'Body content',
-      ].join('\n');
+        ].join('\n'),
+      );
     });
 
     const result = await service.scanRawFolder();
@@ -85,27 +96,33 @@ describe('VaultScannerService', () => {
   });
 
   it('skips files with malformed/missing frontmatter instead of throwing', async () => {
-    mockedFs.readdir.mockImplementation(async (dir) => {
+    mockedFs.readdir.mockImplementation((dir) => {
       const dirStr = dir.toString();
       if (dirStr === path.join('/vault', 'raw')) {
-        return [dirent('bad.md', false), dirent('good.md', false)] as never;
+        return Promise.resolve([
+          dirent('bad.md', false),
+          dirent('good.md', false),
+        ] as never);
       }
-      return [] as never;
+      return Promise.resolve([] as never);
     });
 
-    mockedFs.readFile.mockImplementation(async (filePath) => {
-      const pathStr = filePath.toString();
+    mockedFs.readFile.mockImplementation((filePath: PathLike) => {
+      const pathStr =
+        typeof filePath === 'string' ? filePath : filePath.toString();
       if (pathStr.endsWith('bad.md')) {
-        return 'no frontmatter at all here';
+        return Promise.resolve('no frontmatter at all here');
       }
-      return [
-        '---',
-        'sourceType: "text"',
-        'captureMethod: "manual"',
-        'capturedAt: "2026-07-20T10:00:00.000Z"',
-        '---',
-        'Body',
-      ].join('\n');
+      return Promise.resolve(
+        [
+          '---',
+          'sourceType: "text"',
+          'captureMethod: "manual"',
+          'capturedAt: "2026-07-20T10:00:00.000Z"',
+          '---',
+          'Body',
+        ].join('\n'),
+      );
     });
 
     const result = await service.scanRawFolder();

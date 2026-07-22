@@ -45,11 +45,7 @@ describe('computeFreeTime', () => {
   it('merges back-to-back events with no phantom gap between them', () => {
     const events = [
       event('first', atLocal(2026, 7, 7, 12, 0), atLocal(2026, 7, 7, 13, 0)),
-      event(
-        'second',
-        atLocal(2026, 7, 7, 13, 0),
-        atLocal(2026, 7, 7, 14, 0),
-      ),
+      event('second', atLocal(2026, 7, 7, 13, 0), atLocal(2026, 7, 7, 14, 0)),
     ];
 
     const result = computeFreeTime(now, endOfDay, events, minimumGapMinutes);
@@ -69,11 +65,7 @@ describe('computeFreeTime', () => {
   it('merges overlapping events into one busy block', () => {
     const events = [
       event('first', atLocal(2026, 7, 7, 12, 0), atLocal(2026, 7, 7, 13, 30)),
-      event(
-        'overlap',
-        atLocal(2026, 7, 7, 13, 0),
-        atLocal(2026, 7, 7, 14, 0),
-      ),
+      event('overlap', atLocal(2026, 7, 7, 13, 0), atLocal(2026, 7, 7, 14, 0)),
     ];
 
     const result = computeFreeTime(now, endOfDay, events, minimumGapMinutes);
@@ -126,11 +118,7 @@ describe('computeFreeTime', () => {
   it('treats an in-progress event as busy from now until its end', () => {
     const inProgressEnd = atLocal(2026, 7, 7, 10, 0);
     const events = [
-      event(
-        'in-progress',
-        atLocal(2026, 7, 7, 8, 0),
-        inProgressEnd,
-      ),
+      event('in-progress', atLocal(2026, 7, 7, 8, 0), inProgressEnd),
     ];
 
     const result = computeFreeTime(now, endOfDay, events, minimumGapMinutes);
@@ -139,9 +127,7 @@ describe('computeFreeTime', () => {
     expect(result.windows[0].start).toEqual(inProgressEnd);
     expect(result.windows[0].end).toEqual(endOfDay);
     expect(
-      result.windows.some(
-        (window) => window.end.getTime() === now.getTime(),
-      ),
+      result.windows.some((window) => window.end.getTime() === now.getTime()),
     ).toBe(false);
   });
 
@@ -207,11 +193,7 @@ describe('computeFreeTime', () => {
   });
 });
 
-function event(
-  title: string,
-  start: Date,
-  end: Date,
-) {
+function event(title: string, start: Date, end: Date) {
   return {
     externalId: `${title}-${start.toISOString()}`,
     title,

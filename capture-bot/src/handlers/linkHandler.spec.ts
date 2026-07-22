@@ -24,7 +24,9 @@ describe('handleLink — TikTok', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedVault.filenameStemFromDate.mockReturnValue('20260722T040000Z');
-    mockedVault.writeRawFile.mockResolvedValue('raw/tiktok/20260722T040000Z.md');
+    mockedVault.writeRawFile.mockResolvedValue(
+      'raw/tiktok/20260722T040000Z.md',
+    );
     mockedVault.appendLog.mockResolvedValue(undefined);
   });
 
@@ -35,21 +37,25 @@ describe('handleLink — TikTok', () => {
   it('writes oEmbed metadata when the TikTok API succeeds', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({
-        title: 'Easy pasta',
-        author_name: 'Chef Ana',
-        author_url: 'https://www.tiktok.com/@chef',
-      }),
-    }) as unknown as typeof fetch;
+      json: () =>
+        Promise.resolve({
+          title: 'Easy pasta',
+          author_name: 'Chef Ana',
+          author_url: 'https://www.tiktok.com/@chef',
+        }),
+    });
 
-    const ctx = { reply: jest.fn() } as unknown as Context;
+    const reply = jest.fn();
+    const ctx = { reply } as unknown as Context;
     const url = 'https://vm.tiktok.com/ABC123/';
 
     await handleLink(ctx, url, '/vault', videoConfig);
 
     expect(global.fetch).toHaveBeenCalledWith(
       `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`,
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      expect.objectContaining({
+        signal: expect.any(AbortSignal) as AbortSignal,
+      }),
     );
     expect(mockedVault.writeRawFile).toHaveBeenCalledWith(
       '/vault',
@@ -58,7 +64,7 @@ describe('handleLink — TikTok', () => {
       expect.objectContaining({ sourceUrl: url }),
       expect.stringContaining('**Video Caption/Title:** Easy pasta'),
     );
-    expect(ctx.reply).toHaveBeenCalledWith('Saved.');
+    expect(reply).toHaveBeenCalledWith('Saved.');
     expect(mockedEnrich).toHaveBeenCalledWith(
       expect.stringMatching(/raw[\\/]tiktok[\\/]20260722T040000Z\.md$/),
       url,
@@ -67,9 +73,10 @@ describe('handleLink — TikTok', () => {
   });
 
   it('falls back to a bookmark note when oEmbed fails', async () => {
-    global.fetch = jest.fn().mockRejectedValue(new Error('timeout')) as unknown as typeof fetch;
+    global.fetch = jest.fn().mockRejectedValue(new Error('timeout'));
 
-    const ctx = { reply: jest.fn() } as unknown as Context;
+    const reply = jest.fn();
+    const ctx = { reply } as unknown as Context;
     const url = 'https://www.tiktok.com/@chef/video/1';
 
     await handleLink(ctx, url, '/vault', videoConfig);
@@ -78,10 +85,13 @@ describe('handleLink — TikTok', () => {
       '/vault',
       'tiktok',
       '20260722T040000Z',
-      expect.objectContaining({ metadataExtractionFailed: true, sourceUrl: url }),
+      expect.objectContaining({
+        metadataExtractionFailed: true,
+        sourceUrl: url,
+      }),
       `# ${url}\n\n${url}`,
     );
-    expect(ctx.reply).toHaveBeenCalledWith(
+    expect(reply).toHaveBeenCalledWith(
       'Saved the link, but metadata could not be fetched.',
     );
   });

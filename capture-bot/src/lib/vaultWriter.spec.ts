@@ -25,7 +25,12 @@ describe('writeRawFile', () => {
       vaultPath,
       'text',
       '20260722T143000Z',
-      { capturedAt: '2026-07-22T14:30:00Z', sourceType: 'text', captureMethod: 'capture_bot', processed: false },
+      {
+        capturedAt: '2026-07-22T14:30:00Z',
+        sourceType: 'text',
+        captureMethod: 'capture_bot',
+        processed: false,
+      },
       'Hello world',
     );
 
@@ -35,11 +40,16 @@ describe('writeRawFile', () => {
     );
 
     expect(mockedFs.writeFile).toHaveBeenCalledTimes(1);
-    const [writtenPath, writtenContent] = mockedFs.writeFile.mock.calls[0];
-    expect(writtenPath).toBe(path.join(vaultPath, 'raw', 'text', '20260722T143000Z.md'));
-    expect(String(writtenContent)).toContain('---');
-    expect(String(writtenContent)).toContain('sourceType: "text"');
-    expect(String(writtenContent)).toContain('Hello world');
+    const [writtenPath, writtenContent] = mockedFs.writeFile.mock.calls[0] as [
+      string,
+      string,
+    ];
+    expect(writtenPath).toBe(
+      path.join(vaultPath, 'raw', 'text', '20260722T143000Z.md'),
+    );
+    expect(writtenContent).toContain('---');
+    expect(writtenContent).toContain('sourceType: "text"');
+    expect(writtenContent).toContain('Hello world');
 
     expect(result).toBe('raw/text/20260722T143000Z.md');
   });
@@ -64,7 +74,10 @@ describe('appendLog', () => {
 
     await appendLog('/vault', entry);
 
-    expect(mockedFs.open).toHaveBeenCalledWith(path.join('/vault', 'log.md'), 'a');
+    expect(mockedFs.open).toHaveBeenCalledWith(
+      path.join('/vault', 'log.md'),
+      'a',
+    );
     expect(appendFile).toHaveBeenCalledWith(
       '- [2026-07-22T14:30:00Z] text — raw/text/20260722T143000Z.md\n',
       'utf-8',

@@ -6,7 +6,10 @@ import { isMeaningfulTranscript } from './isMeaningfulTranscript';
 import { normalizeAudioToWav } from './normalizeAudioToWav';
 import { transcribeWithWhisper } from './transcribeWithWhisper';
 import { appendVideoTranscriptSection } from './vaultWriter';
-import { isVideoEnrichmentConfigured, VideoEnrichmentConfig } from './videoEnrichmentConfig';
+import {
+  isVideoEnrichmentConfigured,
+  VideoEnrichmentConfig,
+} from './videoEnrichmentConfig';
 
 const LOG_PREFIX = '[video-enrichment]';
 
@@ -34,7 +37,9 @@ export async function enrichVideoNoteWithTranscript(
   config: VideoEnrichmentConfig,
 ): Promise<void> {
   if (!isVideoEnrichmentConfigured(config)) {
-    console.log(`${LOG_PREFIX} Skipping enrichment — transcription is not fully configured`);
+    console.log(
+      `${LOG_PREFIX} Skipping enrichment — transcription is not fully configured`,
+    );
     logConfig(config);
     return;
   }
@@ -52,13 +57,17 @@ export async function enrichVideoNoteWithTranscript(
     console.log(`${LOG_PREFIX} Step 1/3: downloading media with yt-dlp`);
     const rawMediaPath = await extractAudioWithYtDlp(url, tmpDir, config);
 
-    console.log(`${LOG_PREFIX} Step 2/3: extracting/normalizing audio to 16 kHz mono WAV via ffmpeg`);
+    console.log(
+      `${LOG_PREFIX} Step 2/3: extracting/normalizing audio to 16 kHz mono WAV via ffmpeg`,
+    );
     const wavPath = await normalizeAudioToWav(rawMediaPath, tmpDir, config);
     if (!wavPath) {
       return;
     }
 
-    console.log(`${LOG_PREFIX} Step 3/3: transcribing with ${config.whisperEngine}`);
+    console.log(
+      `${LOG_PREFIX} Step 3/3: transcribing with ${config.whisperEngine}`,
+    );
     const transcript = await transcribeWithWhisper(wavPath, tmpDir, config);
 
     if (!transcript) {
@@ -67,13 +76,17 @@ export async function enrichVideoNoteWithTranscript(
     }
 
     if (!isMeaningfulTranscript(transcript)) {
-      console.log(`${LOG_PREFIX} Ignoring empty/noise transcript for ${url}: "${transcript.slice(0, 80)}"`);
+      console.log(
+        `${LOG_PREFIX} Ignoring empty/noise transcript for ${url}: "${transcript.slice(0, 80)}"`,
+      );
       return;
     }
 
     console.log(`${LOG_PREFIX} Appending ## Video Transcript to ${notePath}`);
     await appendVideoTranscriptSection(notePath, transcript);
-    console.log(`${LOG_PREFIX} Success — appended ${transcript.length} chars to ${notePath}`);
+    console.log(
+      `${LOG_PREFIX} Success — appended ${transcript.length} chars to ${notePath}`,
+    );
   } catch (err) {
     const error = err as Error & { stderr?: string; stdout?: string };
     console.error(`${LOG_PREFIX} Pipeline failed for ${url}:`, error.message);
@@ -89,9 +102,14 @@ export async function enrichVideoNoteWithTranscript(
   } finally {
     if (tmpDir) {
       console.log(`${LOG_PREFIX} Cleaning up temp dir: ${tmpDir}`);
-      await fs.rm(tmpDir, { recursive: true, force: true }).catch((cleanupErr) => {
-        console.error(`${LOG_PREFIX} Temp cleanup failed for ${tmpDir}:`, cleanupErr);
-      });
+      await fs
+        .rm(tmpDir, { recursive: true, force: true })
+        .catch((cleanupErr) => {
+          console.error(
+            `${LOG_PREFIX} Temp cleanup failed for ${tmpDir}:`,
+            cleanupErr,
+          );
+        });
     }
   }
 }

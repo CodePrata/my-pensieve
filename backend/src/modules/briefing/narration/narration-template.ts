@@ -24,7 +24,7 @@ const EMPTY_CANDIDATES_BULLET =
   '- Nothing from Study or Projects yet — this section is still catching up.';
 
 const EMPTY_CANDIDATES_FOCUS =
-  'Your primary focus should be on getting Study and Projects data flowing — nothing\'s tracked there yet.';
+  "Your primary focus should be on getting Study and Projects data flowing — nothing's tracked there yet.";
 
 export type TimeOfDay = 'Morning' | 'Afternoon' | 'Evening';
 
@@ -144,9 +144,7 @@ export function buildFallbackNarration(
   if (candidates.length === 0) {
     lines.push(EMPTY_CANDIDATES_FOCUS);
   } else {
-    lines.push(
-      `Your primary focus should be on ${candidates[0].title}.`,
-    );
+    lines.push(`Your primary focus should be on ${candidates[0].title}.`);
   }
 
   return lines.join('\n');

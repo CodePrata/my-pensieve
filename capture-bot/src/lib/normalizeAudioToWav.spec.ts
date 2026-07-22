@@ -18,11 +18,14 @@ describe('normalizeAudioToWav', () => {
       const error = Object.assign(new Error('Command failed'), {
         stderr: 'Output file #0 does not contain any stream',
       });
-      callback(error as NodeJS.ErrnoException, '', '');
+      callback(error, '', '');
     });
 
     await expect(
-      normalizeAudioToWav('/tmp/source.mp4', '/tmp', { enabled: true, whisperEngine: 'whisper-cpp' }),
+      normalizeAudioToWav('/tmp/source.mp4', '/tmp', {
+        enabled: true,
+        whisperEngine: 'whisper-cpp',
+      }),
     ).resolves.toBeNull();
   });
 

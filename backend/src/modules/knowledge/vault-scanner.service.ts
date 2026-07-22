@@ -62,8 +62,7 @@ export class VaultScannerService {
         parsed.push({
           sourceType: data.sourceType,
           captureMethod: data.captureMethod,
-          sourceUrl:
-            typeof data.sourceUrl === 'string' ? data.sourceUrl : null,
+          sourceUrl: typeof data.sourceUrl === 'string' ? data.sourceUrl : null,
           rawFilePath: relativePath,
           capturedAt,
         });

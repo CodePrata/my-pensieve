@@ -79,10 +79,10 @@ export class CalendarController {
   }
 
   // NOTE: This route is registered at /auth/google/callback rather than
-// /calendar/auth/callback (which the module's URL prefix would suggest).
-// This is intentional: the path must exactly match GOOGLE_REDIRECT_URI as
-// registered in Google Cloud Console (http://localhost:3000/auth/google/callback),
-// or Google's redirect will 404. See handoff notes, OAuth implementation task.
+  // /calendar/auth/callback (which the module's URL prefix would suggest).
+  // This is intentional: the path must exactly match GOOGLE_REDIRECT_URI as
+  // registered in Google Cloud Console (http://localhost:3000/auth/google/callback),
+  // or Google's redirect will 404. See handoff notes, OAuth implementation task.
   @Get('auth/google/callback') // or however the route decorator is currently written
   @UseGuards(AuthGuard('google'))
   async googleAuthCallback(@Req() req: Request, @Res() res: Response) {

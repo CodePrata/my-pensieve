@@ -22,7 +22,15 @@ export function createMessageRouter(config: MessageRouterConfig) {
     }
 
     const message = ctx.message as
-      | { photo?: unknown[]; text?: string; video?: unknown; document?: unknown; audio?: unknown; voice?: unknown; sticker?: unknown }
+      | {
+          photo?: unknown[];
+          text?: string;
+          video?: unknown;
+          document?: unknown;
+          audio?: unknown;
+          voice?: unknown;
+          sticker?: unknown;
+        }
       | undefined;
 
     if (!message) {
@@ -30,14 +38,24 @@ export function createMessageRouter(config: MessageRouterConfig) {
     }
 
     if (message.photo && message.photo.length > 0) {
-      await handleImage(ctx, config.vaultPath, config.ollamaBaseUrl, config.ollamaVisionModel);
+      await handleImage(
+        ctx,
+        config.vaultPath,
+        config.ollamaBaseUrl,
+        config.ollamaVisionModel,
+      );
       return;
     }
 
     if (typeof message.text === 'string') {
       const urlMatch = message.text.match(URL_REGEX);
       if (urlMatch) {
-        await handleLink(ctx, urlMatch[0], config.vaultPath, config.videoEnrichment);
+        await handleLink(
+          ctx,
+          urlMatch[0],
+          config.vaultPath,
+          config.videoEnrichment,
+        );
         return;
       }
       await handleText(ctx, config.vaultPath);

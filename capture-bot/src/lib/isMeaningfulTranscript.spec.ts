@@ -2,7 +2,9 @@ import { isMeaningfulTranscript } from './isMeaningfulTranscript';
 
 describe('isMeaningfulTranscript', () => {
   it('accepts normal speech text', () => {
-    expect(isMeaningfulTranscript('This is a useful transcript about pasta.')).toBe(true);
+    expect(
+      isMeaningfulTranscript('This is a useful transcript about pasta.'),
+    ).toBe(true);
   });
 
   it('rejects empty or very short output', () => {

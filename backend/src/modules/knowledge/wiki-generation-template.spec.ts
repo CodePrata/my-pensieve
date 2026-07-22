@@ -5,7 +5,10 @@ import {
 
 describe('buildWikiGenerationPrompt', () => {
   it('lists existing titles when present', () => {
-    const prompt = buildWikiGenerationPrompt(['Networking', 'Prisma'], 'some content');
+    const prompt = buildWikiGenerationPrompt(
+      ['Networking', 'Prisma'],
+      'some content',
+    );
     expect(prompt).toContain('- Networking');
     expect(prompt).toContain('- Prisma');
     expect(prompt).toContain('some content');
@@ -75,24 +78,24 @@ describe('parseWikiGenerationResponse', () => {
       title: 'Some Unknown Page',
     });
 
-    expect(() =>
-      parseWikiGenerationResponse(response, existingTitles),
-    ).toThrow(/not in the existing list/);
+    expect(() => parseWikiGenerationResponse(response, existingTitles)).toThrow(
+      /not in the existing list/,
+    );
   });
 
   it('throws when a new-page decision is missing a summary', () => {
     const response = JSON.stringify({ action: 'new', title: 'New Topic' });
 
-    expect(() =>
-      parseWikiGenerationResponse(response, existingTitles),
-    ).toThrow(/missing a summary/);
+    expect(() => parseWikiGenerationResponse(response, existingTitles)).toThrow(
+      /missing a summary/,
+    );
   });
 
   it('throws on an unrecognized action', () => {
     const response = JSON.stringify({ action: 'delete', title: 'X' });
 
-    expect(() =>
-      parseWikiGenerationResponse(response, existingTitles),
-    ).toThrow(/unrecognized action/);
+    expect(() => parseWikiGenerationResponse(response, existingTitles)).toThrow(
+      /unrecognized action/,
+    );
   });
 });

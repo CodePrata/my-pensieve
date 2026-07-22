@@ -8,10 +8,12 @@ const DOWNLOAD_TIMEOUT_MS = 120_000;
 const LOG_PREFIX = '[video-enrichment]';
 
 /** Exclude TikTok bytevc video-only streams; prefer h264 + separate audio merge. */
-export const FORMAT_REQUIRES_AUDIO = 'bestaudio/best[vcodec!*=bytevc]/bv*[vcodec^=avc1]+ba/b';
+export const FORMAT_REQUIRES_AUDIO =
+  'bestaudio/best[vcodec!*=bytevc]/bv*[vcodec^=avc1]+ba/b';
 
 /** Fallback merged download — same bytevc exclusion, h264-first merge. */
-export const FORMAT_FALLBACK_MERGED = 'best[vcodec!*=bytevc]/bv*[vcodec^=avc1]+ba/b';
+export const FORMAT_FALLBACK_MERGED =
+  'best[vcodec!*=bytevc]/bv*[vcodec^=avc1]+ba/b';
 
 /** Prefer standard h264/aac streams over exotic TikTok codecs; smaller ties broken by size. */
 export const YT_DLP_FORMAT_SORT = ['+vcodec:h264', '+acodec:aac', '+size'];
@@ -36,7 +38,10 @@ type YtDlpRunner = (
   options?: { timeout?: number },
 ) => Promise<unknown>;
 
-function buildBaseFlags(outputTemplate: string, config: VideoEnrichmentConfig): Record<string, unknown> {
+function buildBaseFlags(
+  outputTemplate: string,
+  config: VideoEnrichmentConfig,
+): Record<string, unknown> {
   const flags: Record<string, unknown> = {
     output: outputTemplate,
     noPlaylist: true,
@@ -51,7 +56,9 @@ function buildBaseFlags(outputTemplate: string, config: VideoEnrichmentConfig): 
       `${LOG_PREFIX} FFMPEG_PATH is set but ffmpegLocation could not be resolved; yt-dlp may not find ffprobe`,
     );
   } else {
-    console.error(`${LOG_PREFIX} FFMPEG_PATH is not set; yt-dlp may fail without --ffmpeg-location`);
+    console.error(
+      `${LOG_PREFIX} FFMPEG_PATH is not set; yt-dlp may fail without --ffmpeg-location`,
+    );
   }
 
   return flags;
@@ -59,7 +66,10 @@ function buildBaseFlags(outputTemplate: string, config: VideoEnrichmentConfig): 
 
 function logYtDlpError(phase: string, url: string, err: unknown): void {
   const error = err as Error & { stderr?: string; stdout?: string };
-  console.error(`${LOG_PREFIX} yt-dlp ${phase} failed for ${url}:`, error.message);
+  console.error(
+    `${LOG_PREFIX} yt-dlp ${phase} failed for ${url}:`,
+    error.message,
+  );
   if (error.stderr) {
     console.error(`${LOG_PREFIX} yt-dlp ${phase} stderr:\n${error.stderr}`);
   }
@@ -68,7 +78,9 @@ function logYtDlpError(phase: string, url: string, err: unknown): void {
   }
 }
 
-export async function findDownloadedMediaFile(tmpDir: string): Promise<string | null> {
+export async function findDownloadedMediaFile(
+  tmpDir: string,
+): Promise<string | null> {
   const files = await fs.readdir(tmpDir);
   const mediaFiles = files
     .filter((file) => file.startsWith('source.') && !file.endsWith('.part'))
@@ -114,8 +126,12 @@ async function runYtDlp(
 
   try {
     const result = await ytDlp(url, flags, { timeout: DOWNLOAD_TIMEOUT_MS });
-    if (result) {
-      console.log(`${LOG_PREFIX} yt-dlp ${phase}: stdout=${String(result).slice(0, 500)}`);
+    if (result !== undefined && result !== null) {
+      const stdoutPreview =
+        typeof result === 'string' ? result : JSON.stringify(result);
+      console.log(
+        `${LOG_PREFIX} yt-dlp ${phase}: stdout=${stdoutPreview.slice(0, 500)}`,
+      );
     }
     console.log(`${LOG_PREFIX} yt-dlp ${phase}: completed`);
     return true;
@@ -136,7 +152,9 @@ async function acceptValidatedMediaFile(
   }
 
   if (await hasAudioStream(mediaPath, config)) {
-    console.log(`${LOG_PREFIX} yt-dlp ${phase}: validated audio stream in ${mediaPath}`);
+    console.log(
+      `${LOG_PREFIX} yt-dlp ${phase}: validated audio stream in ${mediaPath}`,
+    );
     return mediaPath;
   }
 
@@ -153,13 +171,21 @@ export async function extractAudioWithYtDlp(
   config: VideoEnrichmentConfig,
 ): Promise<string> {
   const outputTemplate = path.join(tmpDir, 'source.%(ext)s');
-  const ytDlp = config.ytDlpPath ? createYtDlpRunner(config.ytDlpPath) : ytDlpExec;
+  const ytDlp = config.ytDlpPath
+    ? createYtDlpRunner(config.ytDlpPath)
+    : ytDlpExec;
   const baseFlags = buildBaseFlags(outputTemplate, config);
 
   console.log(`${LOG_PREFIX} yt-dlp: downloading media for ${url}`);
-  console.log(`${LOG_PREFIX} yt-dlp: binary=${config.ytDlpPath ?? '(bundled/default)'}`);
-  console.log(`${LOG_PREFIX} yt-dlp: ffmpegLocation=${config.ffmpegLocation ?? '(unset)'}`);
-  console.log(`${LOG_PREFIX} yt-dlp: ffprobePath=${config.ffprobePath ?? '(unset)'}`);
+  console.log(
+    `${LOG_PREFIX} yt-dlp: binary=${config.ytDlpPath ?? '(bundled/default)'}`,
+  );
+  console.log(
+    `${LOG_PREFIX} yt-dlp: ffmpegLocation=${config.ffmpegLocation ?? '(unset)'}`,
+  );
+  console.log(
+    `${LOG_PREFIX} yt-dlp: ffprobePath=${config.ffprobePath ?? '(unset)'}`,
+  );
   console.log(`${LOG_PREFIX} yt-dlp: output template=${outputTemplate}`);
 
   const extractAudioOk = await runYtDlp(
@@ -175,12 +201,18 @@ export async function extractAudioWithYtDlp(
   );
 
   if (extractAudioOk) {
-    const validatedPath = await acceptValidatedMediaFile(tmpDir, config, 'extract-audio');
+    const validatedPath = await acceptValidatedMediaFile(
+      tmpDir,
+      config,
+      'extract-audio',
+    );
     if (validatedPath) {
       console.log(`${LOG_PREFIX} yt-dlp: downloaded media=${validatedPath}`);
       return validatedPath;
     }
-    console.log(`${LOG_PREFIX} yt-dlp: extract-audio produced no file with a real audio stream`);
+    console.log(
+      `${LOG_PREFIX} yt-dlp: extract-audio produced no file with a real audio stream`,
+    );
   }
 
   console.log(
@@ -195,7 +227,11 @@ export async function extractAudioWithYtDlp(
     'fallback-merged-audio',
   );
 
-  const fallbackMediaPath = await acceptValidatedMediaFile(tmpDir, config, 'fallback-merged-audio');
+  const fallbackMediaPath = await acceptValidatedMediaFile(
+    tmpDir,
+    config,
+    'fallback-merged-audio',
+  );
   if (fallbackMediaPath) {
     console.log(
       `${LOG_PREFIX} yt-dlp: fallback download succeeded — using direct ffmpeg extraction: ${fallbackMediaPath}`,
@@ -204,10 +240,16 @@ export async function extractAudioWithYtDlp(
   }
 
   if (!fallbackOk) {
-    throw new Error('yt-dlp failed to download media with audio and no validated fallback file was found');
+    throw new Error(
+      'yt-dlp failed to download media with audio and no validated fallback file was found',
+    );
   }
 
   const files = await fs.readdir(tmpDir);
-  console.log(`${LOG_PREFIX} yt-dlp: temp dir contents=${files.join(', ') || '(empty)'}`);
-  throw new Error('yt-dlp did not produce a downloadable media file with a validated audio stream');
+  console.log(
+    `${LOG_PREFIX} yt-dlp: temp dir contents=${files.join(', ') || '(empty)'}`,
+  );
+  throw new Error(
+    'yt-dlp did not produce a downloadable media file with a validated audio stream',
+  );
 }

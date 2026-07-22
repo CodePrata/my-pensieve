@@ -91,13 +91,15 @@ describe('BriefingService', () => {
       freeTimeResult,
     );
     briefingNarrationService.narrate.mockResolvedValue({
-      narration: 'Good Morning there,\nYour primary focus should be on My Pensieve.',
+      narration:
+        'Good Morning there,\nYour primary focus should be on My Pensieve.',
       degraded: false,
       degradedReason: null,
     });
     prisma.briefingSnapshot.create.mockResolvedValue({
       id: 'snapshot-1',
-      narration: 'Good Morning there,\nYour primary focus should be on My Pensieve.',
+      narration:
+        'Good Morning there,\nYour primary focus should be on My Pensieve.',
       degraded: false,
       degradedReason: null,
       generatedAt: new Date('2026-07-09T06:40:00.000Z'),

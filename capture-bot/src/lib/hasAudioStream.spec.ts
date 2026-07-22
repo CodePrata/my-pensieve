@@ -32,7 +32,10 @@ describe('hasAudioStream', () => {
     });
 
     await expect(
-      hasAudioStream('/tmp/source.mp4', { enabled: true, whisperEngine: 'whisper-cpp' }),
+      hasAudioStream('/tmp/source.mp4', {
+        enabled: true,
+        whisperEngine: 'whisper-cpp',
+      }),
     ).resolves.toBe(false);
   });
 
@@ -42,7 +45,10 @@ describe('hasAudioStream', () => {
     });
 
     await expect(
-      hasAudioStream('/tmp/source.mp4', { enabled: true, whisperEngine: 'whisper-cpp' }),
+      hasAudioStream('/tmp/source.mp4', {
+        enabled: true,
+        whisperEngine: 'whisper-cpp',
+      }),
     ).resolves.toBe(false);
   });
 });

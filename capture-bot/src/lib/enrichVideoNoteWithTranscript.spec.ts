@@ -20,7 +20,6 @@ const mockedNormalize = jest.mocked(normalizeAudioToWav);
 const mockedTranscribe = jest.mocked(transcribeWithWhisper);
 const mockedAppend = jest.mocked(appendVideoTranscriptSection);
 const mockedRm = jest.mocked(fs.rm);
-const mockedMkdtemp = jest.mocked(fs.mkdtemp);
 
 const config: VideoEnrichmentConfig = {
   enabled: true,
@@ -33,13 +32,21 @@ describe('enrichVideoNoteWithTranscript', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedExtract.mockResolvedValue('/tmp/capture-bot-audio-abc/source.webm');
-    mockedNormalize.mockResolvedValue('/tmp/capture-bot-audio-abc/temp_16k.wav');
+    mockedNormalize.mockResolvedValue(
+      '/tmp/capture-bot-audio-abc/temp_16k.wav',
+    );
   });
 
   it('appends a transcript when the pipeline succeeds', async () => {
-    mockedTranscribe.mockResolvedValue('Here is the spoken content from the video.');
+    mockedTranscribe.mockResolvedValue(
+      'Here is the spoken content from the video.',
+    );
 
-    await enrichVideoNoteWithTranscript('/vault/raw/tiktok/note.md', 'https://youtu.be/abc', config);
+    await enrichVideoNoteWithTranscript(
+      '/vault/raw/tiktok/note.md',
+      'https://youtu.be/abc',
+      config,
+    );
 
     expect(mockedAppend).toHaveBeenCalledWith(
       '/vault/raw/tiktok/note.md',
@@ -51,7 +58,11 @@ describe('enrichVideoNoteWithTranscript', () => {
   it('skips append for empty or noise transcripts', async () => {
     mockedTranscribe.mockResolvedValue('[Music]');
 
-    await enrichVideoNoteWithTranscript('/vault/raw/tiktok/note.md', 'https://youtu.be/abc', config);
+    await enrichVideoNoteWithTranscript(
+      '/vault/raw/tiktok/note.md',
+      'https://youtu.be/abc',
+      config,
+    );
 
     expect(mockedAppend).not.toHaveBeenCalled();
     expect(mockedRm).toHaveBeenCalled();
@@ -60,7 +71,11 @@ describe('enrichVideoNoteWithTranscript', () => {
   it('cleans up temp files when extraction fails', async () => {
     mockedExtract.mockRejectedValue(new Error('download failed'));
 
-    await enrichVideoNoteWithTranscript('/vault/raw/tiktok/note.md', 'https://youtu.be/abc', config);
+    await enrichVideoNoteWithTranscript(
+      '/vault/raw/tiktok/note.md',
+      'https://youtu.be/abc',
+      config,
+    );
 
     expect(mockedAppend).not.toHaveBeenCalled();
     expect(mockedRm).toHaveBeenCalled();
@@ -69,7 +84,11 @@ describe('enrichVideoNoteWithTranscript', () => {
   it('skips transcription gracefully when the media file has no audio track', async () => {
     mockedNormalize.mockResolvedValue(null);
 
-    await enrichVideoNoteWithTranscript('/vault/raw/tiktok/note.md', 'https://youtu.be/abc', config);
+    await enrichVideoNoteWithTranscript(
+      '/vault/raw/tiktok/note.md',
+      'https://youtu.be/abc',
+      config,
+    );
 
     expect(mockedTranscribe).not.toHaveBeenCalled();
     expect(mockedAppend).not.toHaveBeenCalled();
@@ -77,10 +96,14 @@ describe('enrichVideoNoteWithTranscript', () => {
   });
 
   it('no-ops when enrichment is not configured', async () => {
-    await enrichVideoNoteWithTranscript('/vault/raw/tiktok/note.md', 'https://youtu.be/abc', {
-      enabled: false,
-      whisperEngine: 'whisper-cpp',
-    });
+    await enrichVideoNoteWithTranscript(
+      '/vault/raw/tiktok/note.md',
+      'https://youtu.be/abc',
+      {
+        enabled: false,
+        whisperEngine: 'whisper-cpp',
+      },
+    );
 
     expect(mockedExtract).not.toHaveBeenCalled();
   });

@@ -47,7 +47,7 @@ describe('KnowledgeController', () => {
 
       const error = (await controller
         .sync()
-        .catch((caught) => caught)) as HttpException;
+        .catch((caught: unknown) => caught)) as HttpException;
 
       expect(error).toBeInstanceOf(HttpException);
       expect(error.getStatus()).toBe(HttpStatus.BAD_GATEWAY);
@@ -63,7 +63,7 @@ describe('KnowledgeController', () => {
     it('delegates directly to the service', () => {
       knowledgeService.getInbox.mockReturnValue([] as never);
 
-      controller.getInbox();
+      void controller.getInbox();
 
       expect(knowledgeService.getInbox).toHaveBeenCalledTimes(1);
     });
@@ -91,7 +91,7 @@ describe('KnowledgeController', () => {
 
       const error = (await controller
         .process()
-        .catch((caught) => caught)) as HttpException;
+        .catch((caught: unknown) => caught)) as HttpException;
 
       expect(error).toBeInstanceOf(HttpException);
       expect(error.getStatus()).toBe(HttpStatus.BAD_GATEWAY);

@@ -1,7 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs/promises';
 import { PrismaService } from '../../prisma/prisma.service';
-import { OllamaClientService } from '../ollama/ollama-client.service';
 import { WikiGeneratorService } from './wiki-generator.service';
 
 jest.mock('fs/promises');
@@ -33,15 +32,17 @@ describe('WikiGeneratorService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     configService.get.mockReturnValue('/vault');
-    mockedFs.readFile.mockResolvedValue('---\nsourceType: "text"\n---\nCaptured body text');
+    mockedFs.readFile.mockResolvedValue(
+      '---\nsourceType: "text"\n---\nCaptured body text',
+    );
     mockedFs.appendFile.mockResolvedValue(undefined);
     mockedFs.writeFile.mockResolvedValue(undefined);
-    mockedFs.mkdir.mockResolvedValue(undefined as never);
+    mockedFs.mkdir.mockResolvedValue(undefined);
 
     service = new WikiGeneratorService(
       prisma as unknown as PrismaService,
       configService as unknown as ConfigService,
-      ollamaClient as unknown as OllamaClientService,
+      ollamaClient,
     );
   });
 
@@ -63,12 +64,15 @@ describe('WikiGeneratorService', () => {
     const result = await service.processInbox();
 
     expect(result).toEqual({ processed: 1, failed: 0, failures: [] });
-    expect(prisma.wikiPage.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        title: 'Networking Basics',
-        filePath: 'wiki/networking-basics.md',
-        summary: 'A summary.',
-      }),
+    const createMock = prisma.wikiPage.create;
+    const calls = createMock.mock.calls as Array<
+      [{ data: { title: string; filePath: string; summary: string } }]
+    >;
+    const createCall = calls[0][0];
+    expect(createCall.data).toEqual({
+      title: 'Networking Basics',
+      filePath: 'wiki/networking-basics.md',
+      summary: 'A summary.',
     });
     expect(mockedFs.writeFile).toHaveBeenCalledWith(
       expect.stringContaining('networking-basics.md'),
@@ -89,7 +93,11 @@ describe('WikiGeneratorService', () => {
       { id: 'raw-2', rawFilePath: 'raw/text/note2.md' },
     ]);
     prisma.wikiPage.findMany.mockResolvedValue([
-      { id: 'wiki-9', title: 'Networking Basics', filePath: 'wiki/networking-basics.md' },
+      {
+        id: 'wiki-9',
+        title: 'Networking Basics',
+        filePath: 'wiki/networking-basics.md',
+      },
     ]);
     ollamaClient.generate.mockResolvedValue(
       JSON.stringify({ action: 'append', title: 'Networking Basics' }),
@@ -105,7 +113,7 @@ describe('WikiGeneratorService', () => {
     );
     expect(prisma.wikiPage.update).toHaveBeenCalledWith({
       where: { id: 'wiki-9' },
-      data: { lastUpdatedAt: expect.any(Date) },
+      data: { lastUpdatedAt: expect.any(Date) as Date },
     });
     expect(prisma.wikiPageSource.create).toHaveBeenCalledWith({
       data: { rawItemId: 'raw-2', wikiPageId: 'wiki-9' },

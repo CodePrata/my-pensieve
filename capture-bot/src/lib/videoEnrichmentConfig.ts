@@ -17,7 +17,9 @@ export interface VideoEnrichmentConfig {
 export function loadVideoEnrichmentConfig(): VideoEnrichmentConfig {
   const enabled = process.env.VIDEO_TRANSCRIPTION_ENABLED !== 'false';
   const whisperEngine =
-    process.env.WHISPER_ENGINE === 'faster-whisper' ? 'faster-whisper' : 'whisper-cpp';
+    process.env.WHISPER_ENGINE === 'faster-whisper'
+      ? 'faster-whisper'
+      : 'whisper-cpp';
 
   const ffmpegPath = process.env.FFMPEG_PATH || undefined;
   const ffprobeEnv = process.env.FFPROBE_PATH || undefined;
@@ -36,7 +38,9 @@ export function loadVideoEnrichmentConfig(): VideoEnrichmentConfig {
   };
 }
 
-export function isVideoEnrichmentConfigured(config: VideoEnrichmentConfig): boolean {
+export function isVideoEnrichmentConfigured(
+  config: VideoEnrichmentConfig,
+): boolean {
   if (!config.enabled || !config.whisperModelPath) {
     return false;
   }

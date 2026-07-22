@@ -75,26 +75,20 @@ export class TelegramPushService {
     parseMode: 'Markdown' | undefined,
   ): Promise<void> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(
-      () => controller.abort(),
-      TELEGRAM_TIMEOUT_MS,
-    );
+    const timeoutId = setTimeout(() => controller.abort(), TELEGRAM_TIMEOUT_MS);
 
     let response: Response;
     try {
-      response = await fetch(
-        `${TELEGRAM_API_BASE}/bot${token}/sendMessage`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text,
-            ...(parseMode ? { parse_mode: parseMode } : {}),
-          }),
-          signal: controller.signal,
-        },
-      );
+      response = await fetch(`${TELEGRAM_API_BASE}/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text,
+          ...(parseMode ? { parse_mode: parseMode } : {}),
+        }),
+        signal: controller.signal,
+      });
     } catch (error) {
       throw new TelegramTransientError(
         `Telegram request failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -121,10 +115,7 @@ export class TelegramPushService {
       );
     }
 
-    if (
-      response.status === 400 &&
-      /chat not found/i.test(description)
-    ) {
+    if (response.status === 400 && /chat not found/i.test(description)) {
       throw new TelegramChatNotFoundError(
         `Telegram chat not found: ${description}`,
       );

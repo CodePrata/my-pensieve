@@ -18,11 +18,17 @@ export function isVideoEnrichmentUrl(url: string): boolean {
       return true;
     }
 
-    if (host.includes('instagram.com') && (pathname.includes('/reel/') || pathname.includes('/reels/'))) {
+    if (
+      host.includes('instagram.com') &&
+      (pathname.includes('/reel/') || pathname.includes('/reels/'))
+    ) {
       return true;
     }
 
-    if ((host.includes('twitter.com') || host === 'x.com') && pathname.includes('/status/')) {
+    if (
+      (host.includes('twitter.com') || host === 'x.com') &&
+      pathname.includes('/status/')
+    ) {
       return true;
     }
 
@@ -30,7 +36,10 @@ export function isVideoEnrichmentUrl(url: string): boolean {
       return true;
     }
 
-    if (host.includes('reddit.com') && (pathname.includes('/comments/') || pathname.includes('/video/'))) {
+    if (
+      host.includes('reddit.com') &&
+      (pathname.includes('/comments/') || pathname.includes('/video/'))
+    ) {
       return true;
     }
 

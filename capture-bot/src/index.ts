@@ -14,7 +14,9 @@ const REQUIRED_ENV_VARS = [
 function loadConfig() {
   const missing = REQUIRED_ENV_VARS.filter((key) => !process.env[key]);
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+    throw new Error(
+      `Missing required environment variables: ${missing.join(', ')}`,
+    );
   }
 
   return {
@@ -33,7 +35,7 @@ function main(): void {
 
   bot.on('message', createMessageRouter(config));
 
-  bot.launch();
+  void bot.launch();
   console.log('Capture bot launched.');
 
   process.once('SIGINT', () => bot.stop('SIGINT'));

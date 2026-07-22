@@ -35,13 +35,9 @@ export class BriefingNarrationService {
     freeTimeResult: FreeTimeResult,
     now: Date,
   ): Promise<NarrationResult> {
-    const userName = this.configService.get<string>('USER_FIRST_NAME') ?? 'there';
-    const prompt = buildOllamaPrompt(
-      candidates,
-      freeTimeResult,
-      now,
-      userName,
-    );
+    const userName =
+      this.configService.get<string>('USER_FIRST_NAME') ?? 'there';
+    const prompt = buildOllamaPrompt(candidates, freeTimeResult, now, userName);
 
     try {
       const ollamaText = await this.ollamaClient.generate(prompt);

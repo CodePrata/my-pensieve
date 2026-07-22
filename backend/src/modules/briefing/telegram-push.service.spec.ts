@@ -45,18 +45,26 @@ describe('TelegramPushService', () => {
       if (key === 'TELEGRAM_ALLOWED_USER_ID') return '12345';
       return undefined;
     });
-    service = new TelegramPushService(configService as unknown as ConfigService);
+    service = new TelegramPushService(
+      configService as unknown as ConfigService,
+    );
     fetchMock = jest.fn();
-    global.fetch = fetchMock as unknown as typeof fetch;
+    global.fetch = fetchMock;
   });
 
   function jsonResponse(ok: boolean, status: number, body: unknown) {
     return {
       ok,
       status,
-      json: async () => body,
+      json: () => Promise.resolve(body),
     } as Response;
   }
+
+  type TelegramSendBody = {
+    chat_id: string;
+    parse_mode?: string;
+    text: string;
+  };
 
   it('sends a Markdown message and resolves on success', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(true, 200, { ok: true }));
@@ -64,9 +72,9 @@ describe('TelegramPushService', () => {
     await service.sendBriefingToTelegram(briefing);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, options] = fetchMock.mock.calls[0];
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://api.telegram.org/bottest-token/sendMessage');
-    const body = JSON.parse((options as RequestInit).body as string);
+    const body = JSON.parse(options.body as string) as TelegramSendBody;
     expect(body.chat_id).toBe('12345');
     expect(body.parse_mode).toBe('Markdown');
     expect(body.text).toContain('My Pensieve');
@@ -86,9 +94,10 @@ describe('TelegramPushService', () => {
     await service.sendBriefingToTelegram(briefing);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    const secondCall = fetchMock.mock.calls[1] as [string, RequestInit];
     const secondBody = JSON.parse(
-      (fetchMock.mock.calls[1][1] as RequestInit).body as string,
-    );
+      secondCall[1].body as string,
+    ) as TelegramSendBody;
     expect(secondBody.parse_mode).toBeUndefined();
   });
 
@@ -143,9 +152,8 @@ describe('TelegramPushService', () => {
       degradedReason: 'Calendar sync failed',
     });
 
-    const body = JSON.parse(
-      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
-    );
+    const firstCall = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(firstCall[1].body as string) as TelegramSendBody;
     expect(body.text).toContain('Calendar sync failed');
   });
 });
