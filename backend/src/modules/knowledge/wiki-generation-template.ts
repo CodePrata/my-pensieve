@@ -1,8 +1,6 @@
-export interface WikiGenerationDecision {
-  action: 'append' | 'new';
-  title: string;
-  summary: string | null;
-}
+export type WikiGenerationDecision =
+  | { action: 'append'; title: string; summary: string | null }
+  | { action: 'new'; title: string; summary: string };
 
 export interface ProjectPromptContext {
   projectName: string;

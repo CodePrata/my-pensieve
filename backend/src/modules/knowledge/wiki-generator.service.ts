@@ -10,6 +10,7 @@ import { VaultWriterService } from './vault-writer.service';
 import {
   buildWikiGenerationPrompt,
   parseWikiGenerationResponse,
+  WikiGenerationDecision,
 } from './wiki-generation-template';
 import {
   buildProjectSubtopicPath,
@@ -203,10 +204,12 @@ export class WikiGeneratorService {
     );
     const rawResponse = await this.ollamaClient.generate(prompt);
     const parsedDecision = parseWikiGenerationResponse(rawResponse);
-    const decision =
-      parsedDecision.action === 'append'
-        ? this.resolveAppendDecision(parsedDecision, existingPages)
-        : parsedDecision;
+    let decision: WikiGenerationDecision;
+    if (parsedDecision.action === 'append') {
+      decision = this.resolveAppendDecision(parsedDecision, existingPages);
+    } else {
+      decision = parsedDecision;
+    }
 
     const now = new Date();
     const dateStamp = now.toISOString().slice(0, 10);
@@ -289,9 +292,9 @@ export class WikiGeneratorService {
   }
 
   private resolveAppendDecision(
-    decision: { action: 'append'; title: string; summary: string | null },
+    decision: Extract<WikiGenerationDecision, { action: 'append' }>,
     existingPages: { id: string; title: string; filePath: string }[],
-  ): { action: 'append'; title: string; summary: string | null } {
+  ): Extract<WikiGenerationDecision, { action: 'append' }> {
     const resolvedTitle = resolveAppendTargetTitle(
       decision.title,
       existingPages,
