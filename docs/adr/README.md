@@ -19,3 +19,4 @@
 | [015](./015-basic-ci.md) | Basic CI Added to Phase 0 |
 | [016](./016-postgres-backup.md) | Postgres Backup Approach |
 | [017](./017-briefing-engine-domain-boundary.md) | Domain Interface Boundary for the Briefing Prioritization Engine |
+| [018](./018-asynchronous-video-transcription-enrichment.md) | Asynchronous Video Audio Transcription Enrichment |

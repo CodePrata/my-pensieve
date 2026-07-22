@@ -13,8 +13,8 @@ My Pensieve — personal life-OS. NestJS 11 modular monolith backend + Next.js (
 
 ## Commands
 ```bash
-# Postgres
-docker compose up -d          # from repo root — Postgres ONLY, nothing else is containerized
+# Full stack (Postgres + backend + frontend; Ollama stays native, never containerized)
+docker compose up -d          # from repo root
 
 # Backend (from backend/)
 npm run start:dev             # correct dev command — `npm run dev` is BROKEN, do not use
@@ -38,14 +38,14 @@ npx prisma migrate dev --name <name>   # for schema changes
 - **Split-by-latency endpoints** for any mixed-fast/slow data source (established pattern, Briefing): a fast always-live endpoint + a separately-cached slow endpoint, fetched independently by the frontend, no `Promise.all`.
 - **LLM output is never trusted with arithmetic or formatting.** Pre-format any number/string in TypeScript before it enters an Ollama prompt. Never ask the model to convert/format values itself.
 - **No new DB tables/migrations without an explicit ask.** Confirm schema changes as their own step.
-- ADRs are numbered sequentially; check `docs/adr/README.md` for the next free number before creating one. **Known conflict:** ADR-018/019 are reserved for two undrafted LifeOS-derived decisions — do not assign these numbers to anything else.
+- ADRs are numbered sequentially; check `docs/adr/README.md` for the next free number before creating one. Next free number is **ADR-019**. ADR-018 was taken by "Asynchronous Video Audio Transcription Enrichment" — the two LifeOS-derived decisions (markdown prompt-pattern storage, ripgrep vault search) that were previously slated for 018/019 now only have ADR-019 available; the other needs a later number.
 
 ## Reference Docs — Read Before Any Significant Change
 - `docs/architecture.md` — system overview, component table, on-demand-sync pattern, deferred items.
 - `docs/data-model.md` — entity definitions, relationships. Labeled a "rough draft" — verify against `backend/prisma/schema.prisma` for exact current field names/types before trusting it.
-- `docs/adr/README.md` — index of all ADRs. **Currently out of date: only lists through ADR-016; ADR-017 (Briefing engine domain-boundary decision) exists but isn't indexed yet.**
-- `docs/adr/*.md` — 17 individual ADRs (001–017), all "Accepted." Read the ones relevant to whatever module you're touching before making a decision that conflicts with one.
-- **Known numbering reservation:** ADR-018 and ADR-019 are reserved for two undrafted LifeOS-derived decisions (markdown prompt-pattern storage, ripgrep vault search). Do not assign these numbers to anything else.
+- `docs/adr/README.md` — index of all ADRs, now up to date through ADR-018.
+- `docs/adr/*.md` — 18 individual ADRs (001–018), all "Accepted." Read the ones relevant to whatever module you're touching before making a decision that conflicts with one.
+- **Known numbering reservation:** ADR-019 is reserved for one undrafted LifeOS-derived decision (markdown prompt-pattern storage or ripgrep vault search — whichever gets drafted first). The other still needs a number assigned when it's drafted. Do not assign ADR-019 to anything else.
 
 ## Known Pitfalls (real bugs hit in this codebase)
 - **All-day Google Calendar events** span midnight-to-midnight and will zero out free-time calculations unless explicitly filtered (`event.allDay === true`) before entering `computeFreeTime()`.
