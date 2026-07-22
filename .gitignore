@@ -23,3 +23,5 @@ backend/generated/prisma
 
 # Obsidian vault (raw/, wiki/, log.md) lives outside the repo tree at OBSIDIAN_VAULT_PATH
 # (see backend/.env, capture-bot/.env) — no .gitignore entry needed for it.
+
+tasks/
