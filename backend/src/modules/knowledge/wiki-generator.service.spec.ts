@@ -62,6 +62,44 @@ describe('WikiGeneratorService', () => {
     );
   });
 
+  it('creates a new WikiPage when Ollama returns a null summary', async () => {
+    prisma.rawItem.findMany.mockResolvedValue([
+      {
+        id: 'raw-null-summary',
+        rawFilePath: 'raw/text/note-null-summary.md',
+        sourceType: 'text',
+        sourceUrl: null,
+      },
+    ]);
+    prisma.wikiPage.findMany.mockResolvedValue([]);
+    prisma.wikiPage.findUnique.mockResolvedValue(null);
+    ollamaClient.generate.mockResolvedValue(
+      JSON.stringify({
+        action: 'new',
+        title: 'Test Note Page',
+        summary: null,
+      }),
+    );
+    prisma.wikiPage.create.mockResolvedValue({ id: 'wiki-null-summary' });
+
+    const result = await service.processInbox();
+
+    expect(result).toEqual({ processed: 1, failed: 0, failures: [] });
+    expect(prisma.wikiPage.create).toHaveBeenCalledWith({
+      data: {
+        title: 'Test Note Page',
+        filePath: 'wiki/test-note-page.md',
+        summary: 'Test Note Page',
+        lastUpdatedAt: expect.any(Date),
+      },
+    });
+    expect(vaultWriter.writeWikiFile).toHaveBeenCalledWith(
+      '/vault',
+      'wiki/test-note-page.md',
+      expect.stringContaining('Test Note Page'),
+    );
+  });
+
   it('creates a new WikiPage when Ollama proposes a new title', async () => {
     prisma.rawItem.findMany.mockResolvedValue([
       {

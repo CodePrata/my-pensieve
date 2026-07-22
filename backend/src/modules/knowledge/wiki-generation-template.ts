@@ -38,6 +38,25 @@ Respond with ONLY minified JSON, no prose, no code fences, in exactly one of the
 {"action":"new","title":"<concise new page title>","summary":"<one-paragraph summary of the page>"}`;
 }
 
+export const SUMMARY_PENDING_FALLBACK = 'Summary pending processing.';
+
+function normalizeOptionalSummary(summary: unknown): string | null {
+  if (typeof summary !== 'string') {
+    return null;
+  }
+  const trimmed = summary.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+export function resolveRequiredSummary(summary: unknown, title: string): string {
+  const normalized = normalizeOptionalSummary(summary);
+  if (normalized !== null) {
+    return normalized;
+  }
+  const trimmedTitle = title.trim();
+  return trimmedTitle.length > 0 ? trimmedTitle : SUMMARY_PENDING_FALLBACK;
+}
+
 export function parseWikiGenerationResponse(
   raw: string,
 ): WikiGenerationDecision {
@@ -71,15 +90,17 @@ export function parseWikiGenerationResponse(
     return {
       action: 'append',
       title: title.trim(),
-      summary: typeof summary === 'string' ? summary : null,
+      summary: normalizeOptionalSummary(summary),
     };
   }
 
   if (action === 'new') {
-    if (typeof summary !== 'string' || summary.trim().length === 0) {
-      throw new Error(`Ollama "new" response is missing a summary: ${raw}`);
-    }
-    return { action: 'new', title, summary };
+    const trimmedTitle = title.trim();
+    return {
+      action: 'new',
+      title: trimmedTitle,
+      summary: resolveRequiredSummary(summary, trimmedTitle),
+    };
   }
 
   throw new Error(`Ollama response has an unrecognized action: ${raw}`);

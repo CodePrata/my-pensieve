@@ -10,6 +10,7 @@ import { VaultWriterService } from './vault-writer.service';
 import {
   buildWikiGenerationPrompt,
   parseWikiGenerationResponse,
+  SUMMARY_PENDING_FALLBACK,
   WikiGenerationDecision,
 } from './wiki-generation-template';
 import {
@@ -305,7 +306,13 @@ export class WikiGeneratorService {
         projectCtx,
       );
     } else {
-      decision = parsedDecision;
+      decision = {
+        ...parsedDecision,
+        summary:
+          parsedDecision.summary?.trim() ||
+          parsedDecision.title?.trim() ||
+          SUMMARY_PENDING_FALLBACK,
+      };
     }
 
     const now = new Date();

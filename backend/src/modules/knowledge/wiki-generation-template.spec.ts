@@ -79,12 +79,61 @@ describe('parseWikiGenerationResponse', () => {
     );
   });
 
-  it('throws when a new-page decision is missing a summary', () => {
+  it('falls back to the title when a new-page decision has no summary', () => {
     const response = JSON.stringify({ action: 'new', title: 'New Topic' });
 
-    expect(() => parseWikiGenerationResponse(response)).toThrow(
-      /missing a summary/,
-    );
+    const decision = parseWikiGenerationResponse(response);
+
+    expect(decision).toEqual({
+      action: 'new',
+      title: 'New Topic',
+      summary: 'New Topic',
+    });
+  });
+
+  it('falls back to the title when a new-page decision has a null summary', () => {
+    const response = JSON.stringify({
+      action: 'new',
+      title: 'Test Note Page',
+      summary: null,
+    });
+
+    const decision = parseWikiGenerationResponse(response);
+
+    expect(decision).toEqual({
+      action: 'new',
+      title: 'Test Note Page',
+      summary: 'Test Note Page',
+    });
+  });
+
+  it('falls back to the title when a new-page decision has an empty summary', () => {
+    const response = JSON.stringify({
+      action: 'new',
+      title: 'Empty Summary Page',
+      summary: '   ',
+    });
+
+    const decision = parseWikiGenerationResponse(response);
+
+    expect(decision).toEqual({
+      action: 'new',
+      title: 'Empty Summary Page',
+      summary: 'Empty Summary Page',
+    });
+  });
+
+
+  it('treats an append decision with an empty summary as null', () => {
+    const response = JSON.stringify({
+      action: 'append',
+      title: 'Networking Basics',
+      summary: '   ',
+    });
+
+    const decision = parseWikiGenerationResponse(response);
+
+    expect(decision.summary).toBeNull();
   });
 
   it('throws on an unrecognized action', () => {
