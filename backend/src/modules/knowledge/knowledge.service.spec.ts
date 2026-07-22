@@ -56,7 +56,10 @@ describe('KnowledgeService', () => {
 
       const result = await service.syncRawItems();
 
-      expect(result).toEqual({ created: 1, skipped: 1 });
+      expect(result).toEqual(
+        expect.objectContaining({ created: 1, skipped: 1 }),
+      );
+      expect(result.syncedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
       expect(prisma.rawItem.create).toHaveBeenCalledTimes(1);
       const createMock = prisma.rawItem.create;
       const calls = createMock.mock.calls as Array<
@@ -82,7 +85,10 @@ describe('KnowledgeService', () => {
 
       const result = await service.syncRawItems();
 
-      expect(result).toEqual({ created: 0, skipped: 1 });
+      expect(result).toEqual(
+        expect.objectContaining({ created: 0, skipped: 1 }),
+      );
+      expect(result.syncedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
       expect(prisma.rawItem.create).not.toHaveBeenCalled();
     });
 
@@ -91,7 +97,10 @@ describe('KnowledgeService', () => {
 
       const result = await service.syncRawItems();
 
-      expect(result).toEqual({ created: 0, skipped: 0 });
+      expect(result).toEqual(
+        expect.objectContaining({ created: 0, skipped: 0 }),
+      );
+      expect(result.syncedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
       expect(prisma.rawItem.findMany).not.toHaveBeenCalled();
     });
   });
@@ -138,7 +147,22 @@ describe('KnowledgeService', () => {
         totalCount: 5,
         unprocessedCount: 3,
         hasMore: true,
+        lastVaultSyncedAt: null,
       });
+    });
+
+    it('returns lastVaultSyncedAt after a vault sync', async () => {
+      vaultScanner.scanRawFolder.mockResolvedValue([]);
+      await service.syncRawItems();
+
+      prisma.rawItem.findMany.mockResolvedValue([]);
+      prisma.rawItem.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0);
+
+      const result = await service.getInbox();
+
+      expect(result.lastVaultSyncedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
 
     it('returns hasMore false when the final page is reached', async () => {
@@ -154,6 +178,7 @@ describe('KnowledgeService', () => {
         totalCount: 4,
         unprocessedCount: 0,
         hasMore: false,
+        lastVaultSyncedAt: null,
       });
     });
   });

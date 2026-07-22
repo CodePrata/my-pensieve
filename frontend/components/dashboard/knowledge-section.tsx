@@ -17,6 +17,7 @@ import type {
   InboxResult,
   ProcessInboxResult,
   RawItem,
+  SyncRawItemsResult,
 } from "@/lib/types";
 
 const INBOX_PAGE_SIZE = 4;
@@ -25,9 +26,13 @@ export function KnowledgeSection() {
   const [items, setItems] = useState<RawItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [unprocessedCount, setUnprocessedCount] = useState(0);
+  const [lastVaultSyncedAt, setLastVaultSyncedAt] = useState<string | null>(
+    null,
+  );
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [syncing, setSyncing] = useState(true);
+  const [vaultSyncing, setVaultSyncing] = useState(false);
   const [syncFailed, setSyncFailed] = useState(false);
   const [inboxError, setInboxError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -35,6 +40,9 @@ export function KnowledgeSection() {
     null,
   );
   const [processError, setProcessError] = useState<string | null>(null);
+  const [vaultSyncResult, setVaultSyncResult] =
+    useState<SyncRawItemsResult | null>(null);
+  const [vaultSyncError, setVaultSyncError] = useState<string | null>(null);
   const [githubSyncing, setGithubSyncing] = useState(false);
   const [githubSyncResult, setGithubSyncResult] =
     useState<GithubSyncResult | null>(null);
@@ -54,6 +62,7 @@ export function KnowledgeSection() {
     setTotalCount(data.totalCount);
     setUnprocessedCount(data.unprocessedCount);
     setHasMore(data.hasMore);
+    setLastVaultSyncedAt(data.lastVaultSyncedAt);
   }
 
   async function handleLoadMore() {
@@ -82,6 +91,8 @@ export function KnowledgeSection() {
 
       if (!syncOutcome.ok) {
         setSyncFailed(true);
+      } else {
+        setLastVaultSyncedAt(syncOutcome.result.syncedAt);
       }
 
       try {
@@ -128,6 +139,29 @@ export function KnowledgeSection() {
     }
   }
 
+  async function handleSyncVault() {
+    setVaultSyncing(true);
+    setVaultSyncError(null);
+    setVaultSyncResult(null);
+
+    try {
+      const response = await fetch("/knowledge/sync-vault", { method: "POST" });
+      if (!response.ok) {
+        throw new Error(`Vault sync failed (${response.status})`);
+      }
+      const result = (await response.json()) as SyncRawItemsResult;
+      setVaultSyncResult(result);
+      setLastVaultSyncedAt(result.syncedAt);
+      await fetchInbox();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to sync vault";
+      setVaultSyncError(message);
+    } finally {
+      setVaultSyncing(false);
+    }
+  }
+
   async function handleSyncGithub() {
     setGithubSyncing(true);
     setGithubSyncError(null);
@@ -143,10 +177,14 @@ export function KnowledgeSection() {
       const result = (await githubResponse.json()) as GithubSyncResult;
       setGithubSyncResult(result);
 
-      const syncResponse = await fetch("/knowledge/sync", { method: "POST" });
+      const syncResponse = await fetch("/knowledge/sync-vault", {
+        method: "POST",
+      });
       if (!syncResponse.ok) {
         throw new Error(`Inbox sync failed (${syncResponse.status})`);
       }
+      const syncResult = (await syncResponse.json()) as SyncRawItemsResult;
+      setLastVaultSyncedAt(syncResult.syncedAt);
 
       await fetchInbox();
     } catch (error) {
@@ -179,21 +217,52 @@ export function KnowledgeSection() {
           <Button
             size="sm"
             variant="outline"
+            onClick={() => void handleSyncVault()}
+            disabled={vaultSyncing || syncing || githubSyncing}
+          >
+            {vaultSyncing ? "Syncing Vault…" : "Sync Vault"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
             onClick={() => void handleSyncGithub()}
-            disabled={githubSyncing || syncing}
+            disabled={githubSyncing || syncing || vaultSyncing}
           >
             {githubSyncing ? "Syncing GitHub…" : "Sync GitHub"}
           </Button>
           <Button
             size="sm"
             onClick={() => void handleProcessInbox()}
-            disabled={processing || syncing || unprocessedCount === 0}
+            disabled={
+              processing ||
+              syncing ||
+              vaultSyncing ||
+              githubSyncing ||
+              unprocessedCount === 0
+            }
           >
             {processInboxLabel}
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!syncing && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={unprocessedCount > 0 ? "default" : "secondary"}>
+              {unprocessedCount} pending
+            </Badge>
+            {lastVaultSyncedAt ? (
+              <span className="text-xs text-muted-foreground">
+                Vault synced {new Date(lastVaultSyncedAt).toLocaleString()}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                Vault not synced yet
+              </span>
+            )}
+          </div>
+        )}
+
         {syncing && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span
@@ -224,6 +293,21 @@ export function KnowledgeSection() {
           <Alert variant="destructive">
             <AlertTitle>Processing failed</AlertTitle>
             <AlertDescription>{processError}</AlertDescription>
+          </Alert>
+        )}
+
+        {vaultSyncError && (
+          <Alert variant="destructive">
+            <AlertTitle>Vault sync failed</AlertTitle>
+            <AlertDescription>{vaultSyncError}</AlertDescription>
+          </Alert>
+        )}
+
+        {vaultSyncResult && vaultSyncResult.created > 0 && (
+          <Alert>
+            <AlertTitle>
+              Indexed {vaultSyncResult.created} new raw file(s) from the vault
+            </AlertTitle>
           </Alert>
         )}
 

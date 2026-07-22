@@ -15,6 +15,7 @@ export interface RawItem {
 export interface SyncRawItemsResult {
   created: number;
   skipped: number;
+  syncedAt: string;
 }
 
 export interface InboxResult {
@@ -22,11 +23,13 @@ export interface InboxResult {
   totalCount: number;
   unprocessedCount: number;
   hasMore: boolean;
+  lastVaultSyncedAt: string | null;
 }
 
 @Injectable()
 export class KnowledgeService {
   private readonly logger = new Logger(KnowledgeService.name);
+  private lastVaultSyncedAt: Date | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -34,10 +37,13 @@ export class KnowledgeService {
   ) {}
 
   async syncRawItems(): Promise<SyncRawItemsResult> {
+    const syncedAt = new Date();
+    this.lastVaultSyncedAt = syncedAt;
+
     const parsedFiles = await this.vaultScanner.scanRawFolder();
 
     if (parsedFiles.length === 0) {
-      return { created: 0, skipped: 0 };
+      return { created: 0, skipped: 0, syncedAt: syncedAt.toISOString() };
     }
 
     const existing = await this.prisma.rawItem.findMany({
@@ -65,7 +71,7 @@ export class KnowledgeService {
       `Knowledge Inbox sync complete: ${created} created, ${skipped} skipped`,
     );
 
-    return { created, skipped };
+    return { created, skipped, syncedAt: syncedAt.toISOString() };
   }
 
   private async createRawItem(file: ParsedRawFile) {
@@ -106,6 +112,7 @@ export class KnowledgeService {
       totalCount,
       unprocessedCount,
       hasMore: offset + items.length < totalCount,
+      lastVaultSyncedAt: this.lastVaultSyncedAt?.toISOString() ?? null,
     };
   }
 }

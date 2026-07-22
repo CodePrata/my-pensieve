@@ -24,17 +24,22 @@ export class KnowledgeController {
   ) {}
 
   @Post('sync')
-  async sync() {
+  sync() {
+    return this.syncVault();
+  }
+
+  @Post('sync-vault')
+  async syncVault() {
     try {
       return await this.knowledgeService.syncRawItems();
     } catch (error) {
       const detail =
         error instanceof Error ? error.message : 'Unknown sync error';
-      this.logger.error(`Knowledge Inbox sync failed: ${detail}`);
+      this.logger.error(`Knowledge Inbox vault sync failed: ${detail}`);
       throw new HttpException(
         {
           statusCode: HttpStatus.BAD_GATEWAY,
-          message: 'Knowledge Inbox sync failed',
+          message: 'Knowledge Inbox vault sync failed',
           error: detail,
         },
         HttpStatus.BAD_GATEWAY,

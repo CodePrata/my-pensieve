@@ -34,11 +34,13 @@ describe('KnowledgeController', () => {
       knowledgeService.syncRawItems.mockResolvedValue({
         created: 2,
         skipped: 1,
+        syncedAt: '2026-07-22T12:00:00.000Z',
       });
 
       await expect(controller.sync()).resolves.toEqual({
         created: 2,
         skipped: 1,
+        syncedAt: '2026-07-22T12:00:00.000Z',
       });
     });
 
@@ -55,9 +57,38 @@ describe('KnowledgeController', () => {
       expect(error.getStatus()).toBe(HttpStatus.BAD_GATEWAY);
       expect(error.getResponse()).toEqual({
         statusCode: HttpStatus.BAD_GATEWAY,
-        message: 'Knowledge Inbox sync failed',
+        message: 'Knowledge Inbox vault sync failed',
         error: 'OBSIDIAN_VAULT_PATH is not set',
       });
+    });
+  });
+
+  describe('POST /knowledge/sync-vault', () => {
+    it('returns the sync result on success', async () => {
+      knowledgeService.syncRawItems.mockResolvedValue({
+        created: 1,
+        skipped: 0,
+        syncedAt: '2026-07-22T12:00:00.000Z',
+      });
+
+      await expect(controller.syncVault()).resolves.toEqual({
+        created: 1,
+        skipped: 0,
+        syncedAt: '2026-07-22T12:00:00.000Z',
+      });
+    });
+
+    it('wraps a thrown error as a 502 HttpException', async () => {
+      knowledgeService.syncRawItems.mockRejectedValue(
+        new Error('OBSIDIAN_VAULT_PATH is not set'),
+      );
+
+      const error = (await controller
+        .syncVault()
+        .catch((caught: unknown) => caught)) as HttpException;
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect(error.getStatus()).toBe(HttpStatus.BAD_GATEWAY);
     });
   });
 
@@ -68,6 +99,7 @@ describe('KnowledgeController', () => {
         totalCount: 0,
         unprocessedCount: 0,
         hasMore: false,
+        lastVaultSyncedAt: null,
       } as never);
 
       void controller.getInbox(4, 8);
@@ -81,6 +113,7 @@ describe('KnowledgeController', () => {
         totalCount: 10,
         unprocessedCount: 3,
         hasMore: true,
+        lastVaultSyncedAt: '2026-07-22T12:00:00.000Z',
       } as never);
 
       expect(controller.getInbox(4, 0)).toEqual({
@@ -88,6 +121,7 @@ describe('KnowledgeController', () => {
         totalCount: 10,
         unprocessedCount: 3,
         hasMore: true,
+        lastVaultSyncedAt: '2026-07-22T12:00:00.000Z',
       });
     });
   });

@@ -69,11 +69,13 @@ export interface InboxResult {
   totalCount: number;
   unprocessedCount: number;
   hasMore: boolean;
+  lastVaultSyncedAt: string | null;
 }
 
 export interface SyncRawItemsResult {
   created: number;
   skipped: number;
+  syncedAt: string;
 }
 
 export interface ProcessInboxFailure {
