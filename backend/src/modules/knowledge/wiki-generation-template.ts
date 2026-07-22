@@ -4,17 +4,27 @@ export interface WikiGenerationDecision {
   summary: string | null;
 }
 
+export interface ProjectPromptContext {
+  projectName: string;
+  indexTitle: string;
+}
+
 export function buildWikiGenerationPrompt(
   existingTitles: string[],
   rawContent: string,
+  projectContext?: ProjectPromptContext,
 ): string {
   const titleList =
     existingTitles.length > 0
       ? existingTitles.map((title) => `- ${title}`).join('\n')
       : '(none yet)';
 
-  return `You are maintaining a personal knowledge wiki made of Markdown pages, one per concept/topic.
+  const projectHint = projectContext
+    ? `\nThis note comes from the "${projectContext.projectName}" project repository. The main project overview page is titled "${projectContext.indexTitle}". Prefer appending to "${projectContext.indexTitle}" for general project updates; create a new page only for a distinct sub-topic or feature area.\n`
+    : '';
 
+  return `You are maintaining a personal knowledge wiki made of Markdown pages, one per concept/topic.
+${projectHint}
 Existing wiki page titles:
 ${titleList}
 

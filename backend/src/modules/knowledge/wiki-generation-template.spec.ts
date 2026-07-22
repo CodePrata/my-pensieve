@@ -18,6 +18,15 @@ describe('buildWikiGenerationPrompt', () => {
     const prompt = buildWikiGenerationPrompt([], 'some content');
     expect(prompt).toContain('(none yet)');
   });
+
+  it('includes project context when provided', () => {
+    const prompt = buildWikiGenerationPrompt([], 'some content', {
+      projectName: 'My Pensieve',
+      indexTitle: 'My Pensieve',
+    });
+    expect(prompt).toContain('My Pensieve');
+    expect(prompt).toContain('main project overview page');
+  });
 });
 
 describe('parseWikiGenerationResponse', () => {

@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs/promises';
 import { PrismaService } from '../../prisma/prisma.service';
+import { VaultWriterService } from './vault-writer.service';
 import { WikiGeneratorService } from './wiki-generator.service';
 
 jest.mock('fs/promises');
@@ -24,10 +25,18 @@ describe('WikiGeneratorService', () => {
     wikiPageSource: {
       create: jest.fn(),
     },
+    project: {
+      findFirst: jest.fn(),
+    },
   };
 
   const ollamaClient = { generate: jest.fn() };
   const configService = { get: jest.fn().mockReturnValue('/vault') };
+  const vaultWriter = {
+    writeWikiFile: jest.fn(),
+    appendWikiFile: jest.fn(),
+    appendProjectSubtopicLink: jest.fn(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -35,20 +44,27 @@ describe('WikiGeneratorService', () => {
     mockedFs.readFile.mockResolvedValue(
       '---\nsourceType: "text"\n---\nCaptured body text',
     );
-    mockedFs.appendFile.mockResolvedValue(undefined);
-    mockedFs.writeFile.mockResolvedValue(undefined);
-    mockedFs.mkdir.mockResolvedValue(undefined);
+    vaultWriter.writeWikiFile.mockResolvedValue(undefined);
+    vaultWriter.appendWikiFile.mockResolvedValue(undefined);
+    vaultWriter.appendProjectSubtopicLink.mockResolvedValue(undefined);
+    prisma.project.findFirst.mockResolvedValue(null);
 
     service = new WikiGeneratorService(
       prisma as unknown as PrismaService,
       configService as unknown as ConfigService,
       ollamaClient,
+      vaultWriter as unknown as VaultWriterService,
     );
   });
 
   it('creates a new WikiPage when Ollama proposes a new title', async () => {
     prisma.rawItem.findMany.mockResolvedValue([
-      { id: 'raw-1', rawFilePath: 'raw/text/note.md' },
+      {
+        id: 'raw-1',
+        rawFilePath: 'raw/text/note.md',
+        sourceType: 'text',
+        sourceUrl: null,
+      },
     ]);
     prisma.wikiPage.findMany.mockResolvedValue([]);
     prisma.wikiPage.findUnique.mockResolvedValue(null);
@@ -73,11 +89,12 @@ describe('WikiGeneratorService', () => {
       title: 'Networking Basics',
       filePath: 'wiki/networking-basics.md',
       summary: 'A summary.',
+      lastUpdatedAt: expect.any(Date) as Date,
     });
-    expect(mockedFs.writeFile).toHaveBeenCalledWith(
-      expect.stringContaining('networking-basics.md'),
+    expect(vaultWriter.writeWikiFile).toHaveBeenCalledWith(
+      '/vault',
+      'wiki/networking-basics.md',
       expect.stringContaining('A summary.'),
-      'utf-8',
     );
     expect(prisma.wikiPageSource.create).toHaveBeenCalledWith({
       data: { rawItemId: 'raw-1', wikiPageId: 'wiki-1' },
@@ -88,9 +105,105 @@ describe('WikiGeneratorService', () => {
     });
   });
 
+  it('creates the project main index under wiki/<project-slug>/ for GitHub raw items', async () => {
+    prisma.rawItem.findMany.mockResolvedValue([
+      {
+        id: 'raw-gh-1',
+        rawFilePath: 'raw/github/user-my-pensieve-20260101.md',
+        sourceType: 'github',
+        sourceUrl: 'https://github.com/user/my-pensieve',
+      },
+    ]);
+    prisma.project.findFirst.mockResolvedValue({
+      name: 'My Pensieve',
+      repoUrl: 'https://github.com/user/my-pensieve',
+    });
+    prisma.wikiPage.findMany.mockResolvedValue([]);
+    prisma.wikiPage.findUnique.mockResolvedValue(null);
+    ollamaClient.generate.mockResolvedValue(
+      JSON.stringify({
+        action: 'new',
+        title: 'My Pensieve Overview',
+        summary: 'Project overview summary.',
+      }),
+    );
+    prisma.wikiPage.create.mockResolvedValue({ id: 'wiki-project-1' });
+
+    const result = await service.processInbox();
+
+    expect(result).toEqual({ processed: 1, failed: 0, failures: [] });
+    expect(prisma.wikiPage.create).toHaveBeenCalledWith({
+      data: {
+        title: 'My Pensieve',
+        filePath: 'wiki/my-pensieve/My-Pensieve.md',
+        summary: 'Project overview summary.',
+        lastUpdatedAt: expect.any(Date) as Date,
+      },
+    });
+    expect(vaultWriter.writeWikiFile).toHaveBeenCalledWith(
+      '/vault',
+      'wiki/my-pensieve/My-Pensieve.md',
+      expect.stringContaining('Project overview summary.'),
+    );
+    expect(vaultWriter.appendProjectSubtopicLink).not.toHaveBeenCalled();
+  });
+
+  it('creates a project sub-topic and links it from the main index', async () => {
+    prisma.rawItem.findMany.mockResolvedValue([
+      {
+        id: 'raw-gh-2',
+        rawFilePath: 'raw/github/user-my-pensieve-20260102.md',
+        sourceType: 'github',
+        sourceUrl: 'https://github.com/user/my-pensieve',
+      },
+    ]);
+    prisma.project.findFirst.mockResolvedValue({
+      name: 'My Pensieve',
+      repoUrl: 'https://github.com/user/my-pensieve',
+    });
+    prisma.wikiPage.findMany.mockResolvedValue([
+      {
+        id: 'wiki-index',
+        title: 'My Pensieve',
+        filePath: 'wiki/my-pensieve/My-Pensieve.md',
+      },
+    ]);
+    prisma.wikiPage.findUnique.mockResolvedValue(null);
+    ollamaClient.generate.mockResolvedValue(
+      JSON.stringify({
+        action: 'new',
+        title: 'Knowledge Inbox',
+        summary: 'Inbox pipeline summary.',
+      }),
+    );
+    prisma.wikiPage.create.mockResolvedValue({ id: 'wiki-sub-1' });
+
+    const result = await service.processInbox();
+
+    expect(result).toEqual({ processed: 1, failed: 0, failures: [] });
+    expect(prisma.wikiPage.create).toHaveBeenCalledWith({
+      data: {
+        title: 'Knowledge Inbox',
+        filePath: 'wiki/my-pensieve/knowledge-inbox.md',
+        summary: 'Inbox pipeline summary.',
+        lastUpdatedAt: expect.any(Date) as Date,
+      },
+    });
+    expect(vaultWriter.appendProjectSubtopicLink).toHaveBeenCalledWith(
+      '/vault',
+      'wiki/my-pensieve/My-Pensieve.md',
+      '[[wiki/my-pensieve/knowledge-inbox|Knowledge Inbox]]',
+    );
+  });
+
   it('appends to an existing WikiPage when Ollama selects an existing title', async () => {
     prisma.rawItem.findMany.mockResolvedValue([
-      { id: 'raw-2', rawFilePath: 'raw/text/note2.md' },
+      {
+        id: 'raw-2',
+        rawFilePath: 'raw/text/note2.md',
+        sourceType: 'text',
+        sourceUrl: null,
+      },
     ]);
     prisma.wikiPage.findMany.mockResolvedValue([
       {
@@ -106,10 +219,10 @@ describe('WikiGeneratorService', () => {
     const result = await service.processInbox();
 
     expect(result).toEqual({ processed: 1, failed: 0, failures: [] });
-    expect(mockedFs.appendFile).toHaveBeenCalledWith(
-      expect.stringContaining('networking-basics.md'),
+    expect(vaultWriter.appendWikiFile).toHaveBeenCalledWith(
+      '/vault',
+      'wiki/networking-basics.md',
       expect.stringContaining('Captured body text'),
-      'utf-8',
     );
     expect(prisma.wikiPage.update).toHaveBeenCalledWith({
       where: { id: 'wiki-9' },
@@ -122,8 +235,18 @@ describe('WikiGeneratorService', () => {
 
   it('records a failure and leaves the item unprocessed when Ollama is unreachable, without aborting the batch', async () => {
     prisma.rawItem.findMany.mockResolvedValue([
-      { id: 'raw-3', rawFilePath: 'raw/text/fails.md' },
-      { id: 'raw-4', rawFilePath: 'raw/text/succeeds.md' },
+      {
+        id: 'raw-3',
+        rawFilePath: 'raw/text/fails.md',
+        sourceType: 'text',
+        sourceUrl: null,
+      },
+      {
+        id: 'raw-4',
+        rawFilePath: 'raw/text/succeeds.md',
+        sourceType: 'text',
+        sourceUrl: null,
+      },
     ]);
     prisma.wikiPage.findMany.mockResolvedValue([]);
     prisma.wikiPage.findUnique.mockResolvedValue(null);
@@ -155,7 +278,12 @@ describe('WikiGeneratorService', () => {
 
   it('records a failure when Ollama selects an append title that does not exist', async () => {
     prisma.rawItem.findMany.mockResolvedValue([
-      { id: 'raw-5', rawFilePath: 'raw/text/note5.md' },
+      {
+        id: 'raw-5',
+        rawFilePath: 'raw/text/note5.md',
+        sourceType: 'text',
+        sourceUrl: null,
+      },
     ]);
     prisma.wikiPage.findMany.mockResolvedValue([
       { id: 'wiki-1', title: 'Real Page', filePath: 'wiki/real-page.md' },

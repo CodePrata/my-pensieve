@@ -5,10 +5,19 @@ import matter from 'gray-matter';
 import * as path from 'path';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OllamaClientService } from '../ollama/ollama-client.service';
+import { parseRepoUrl } from './github-repo.util';
+import { VaultWriterService } from './vault-writer.service';
 import {
   buildWikiGenerationPrompt,
   parseWikiGenerationResponse,
 } from './wiki-generation-template';
+import {
+  buildProjectSubtopicPath,
+  buildProjectWikiContext,
+  buildProjectWikiLink,
+  isProjectMainIndexPage,
+  ProjectWikiContext,
+} from './wiki-path.util';
 import { slugifyTitle } from './wiki-slug.util';
 
 export interface ProcessInboxFailure {
@@ -30,6 +39,7 @@ export class WikiGeneratorService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly ollamaClient: OllamaClientService,
+    private readonly vaultWriter: VaultWriterService,
   ) {}
 
   async processInbox(): Promise<ProcessInboxResult> {
@@ -66,18 +76,34 @@ export class WikiGeneratorService {
 
   private async processOne(
     vaultPath: string,
-    rawItem: { id: string; rawFilePath: string },
+    rawItem: {
+      id: string;
+      rawFilePath: string;
+      sourceType: string;
+      sourceUrl: string | null;
+    },
   ): Promise<void> {
     const absoluteRawPath = path.join(vaultPath, rawItem.rawFilePath);
     const rawFileContent = await fs.readFile(absoluteRawPath, 'utf-8');
     const { content: rawBody } = matter(rawFileContent);
+
+    const projectCtx = await this.resolveProjectWikiContext(rawItem);
 
     const existingPages = await this.prisma.wikiPage.findMany({
       select: { id: true, title: true, filePath: true },
     });
     const existingTitles = existingPages.map((page) => page.title);
 
-    const prompt = buildWikiGenerationPrompt(existingTitles, rawBody.trim());
+    const prompt = buildWikiGenerationPrompt(
+      existingTitles,
+      rawBody.trim(),
+      projectCtx
+        ? {
+            projectName: projectCtx.projectName,
+            indexTitle: projectCtx.indexTitle,
+          }
+        : undefined,
+    );
     const rawResponse = await this.ollamaClient.generate(prompt);
     const decision = parseWikiGenerationResponse(rawResponse, existingTitles);
 
@@ -94,9 +120,12 @@ export class WikiGeneratorService {
         );
       }
 
-      const absoluteWikiPath = path.join(vaultPath, targetPage.filePath);
       const section = `\n## ${dateStamp} — ${rawItem.rawFilePath}\n\n${rawBody.trim()}\n`;
-      await fs.appendFile(absoluteWikiPath, section, 'utf-8');
+      await this.vaultWriter.appendWikiFile(
+        vaultPath,
+        targetPage.filePath,
+        section,
+      );
 
       await this.prisma.wikiPage.update({
         where: { id: targetPage.id },
@@ -110,20 +139,42 @@ export class WikiGeneratorService {
         data: { rawItemId: rawItem.id, wikiPageId: targetPage.id },
       });
     } else {
-      const filePath = await this.reserveWikiFilePath(decision.title);
-      const absoluteWikiPath = path.join(vaultPath, filePath);
-      await fs.mkdir(path.dirname(absoluteWikiPath), { recursive: true });
-      const initialContent = `# ${decision.title}\n\n${decision.summary}\n`;
-      await fs.writeFile(absoluteWikiPath, initialContent, 'utf-8');
+      const createAsMainIndex =
+        projectCtx !== null &&
+        isProjectMainIndexPage(projectCtx, existingPages);
+
+      const pageTitle = createAsMainIndex
+        ? projectCtx.indexTitle
+        : decision.title;
+      const filePath = createAsMainIndex
+        ? projectCtx.indexFilePath
+        : await this.reserveWikiFilePath(decision.title, projectCtx);
+
+      const initialContent = `# ${pageTitle}\n\n${decision.summary}\n`;
+      await this.vaultWriter.writeWikiFile(vaultPath, filePath, initialContent);
 
       const createdPage = await this.prisma.wikiPage.create({
         data: {
-          title: decision.title,
+          title: pageTitle,
           filePath,
           summary: decision.summary,
           lastUpdatedAt: now,
         },
       });
+
+      if (projectCtx && !createAsMainIndex) {
+        const featureStem = path.basename(filePath, '.md');
+        const wikiLink = buildProjectWikiLink(
+          projectCtx.projectSlug,
+          featureStem,
+          decision.title,
+        );
+        await this.vaultWriter.appendProjectSubtopicLink(
+          vaultPath,
+          projectCtx.indexFilePath,
+          wikiLink,
+        );
+      }
 
       await this.prisma.wikiPageSource.create({
         data: { rawItemId: rawItem.id, wikiPageId: createdPage.id },
@@ -136,10 +187,41 @@ export class WikiGeneratorService {
     });
   }
 
-  private async reserveWikiFilePath(title: string): Promise<string> {
-    const slug = slugifyTitle(title);
-    let candidate = `wiki/${slug}.md`;
+  private async resolveProjectWikiContext(rawItem: {
+    sourceType: string;
+    sourceUrl: string | null;
+  }): Promise<ProjectWikiContext | null> {
+    if (rawItem.sourceType !== 'github' || !rawItem.sourceUrl) {
+      return null;
+    }
 
+    const project = await this.prisma.project.findFirst({
+      where: { repoUrl: rawItem.sourceUrl },
+      select: { name: true, repoUrl: true },
+    });
+    if (!project) {
+      return null;
+    }
+
+    const { repo } = parseRepoUrl(project.repoUrl);
+    return buildProjectWikiContext(project.name, repo);
+  }
+
+  private async reserveWikiFilePath(
+    title: string,
+    projectCtx: ProjectWikiContext | null,
+  ): Promise<string> {
+    if (projectCtx) {
+      return this.reserveUniqueFilePath(
+        buildProjectSubtopicPath(projectCtx.projectSlug, title),
+      );
+    }
+
+    const slug = slugifyTitle(title);
+    return this.reserveUniqueFilePath(`wiki/${slug}.md`);
+  }
+
+  private async reserveUniqueFilePath(candidate: string): Promise<string> {
     const existing = await this.prisma.wikiPage.findUnique({
       where: { filePath: candidate },
     });
@@ -147,7 +229,11 @@ export class WikiGeneratorService {
       return candidate;
     }
 
-    candidate = `wiki/${slug}-${Date.now().toString(36)}.md`;
-    return candidate;
+    const parsed = path.parse(candidate);
+    const suffix = Date.now().toString(36);
+    return path
+      .join(parsed.dir, `${parsed.name}-${suffix}${parsed.ext}`)
+      .split(path.sep)
+      .join('/');
   }
 }

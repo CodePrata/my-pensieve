@@ -16,8 +16,71 @@ function toFrontmatterYaml(frontmatter: Record<string, unknown>): string {
   return `---\n${lines.join('\n')}\n---\n`;
 }
 
+const PROJECT_SUBPAGES_SECTION = '## Sub-pages';
+
 @Injectable()
 export class VaultWriterService {
+  async ensureWikiDirectory(
+    vaultPath: string,
+    relativeFilePath: string,
+  ): Promise<void> {
+    const absolutePath = path.join(vaultPath, relativeFilePath);
+    await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+  }
+
+  async writeWikiFile(
+    vaultPath: string,
+    relativeFilePath: string,
+    content: string,
+  ): Promise<void> {
+    await this.ensureWikiDirectory(vaultPath, relativeFilePath);
+    await fs.writeFile(
+      path.join(vaultPath, relativeFilePath),
+      content,
+      'utf-8',
+    );
+  }
+
+  async appendWikiFile(
+    vaultPath: string,
+    relativeFilePath: string,
+    content: string,
+  ): Promise<void> {
+    await fs.appendFile(
+      path.join(vaultPath, relativeFilePath),
+      content,
+      'utf-8',
+    );
+  }
+
+  async appendProjectSubtopicLink(
+    vaultPath: string,
+    indexFilePath: string,
+    wikiLink: string,
+  ): Promise<void> {
+    const absolutePath = path.join(vaultPath, indexFilePath);
+    const content = await fs.readFile(absolutePath, 'utf-8');
+
+    if (content.includes(wikiLink)) {
+      return;
+    }
+
+    if (content.includes(PROJECT_SUBPAGES_SECTION)) {
+      await this.appendWikiFile(
+        vaultPath,
+        indexFilePath,
+        `\n- ${wikiLink}\n`,
+      );
+      return;
+    }
+
+    await this.appendWikiFile(
+      vaultPath,
+      indexFilePath,
+      `\n${PROJECT_SUBPAGES_SECTION}\n\n- ${wikiLink}\n`,
+    );
+  }
+
   async writeGithubRawFile(
     vaultPath: string,
     repoUrl: string,

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Octokit } from '@octokit/rest';
 import { PrismaService } from '../../prisma/prisma.service';
+import { parseRepoUrl } from './github-repo.util';
 import { filenameTimestampStem, VaultWriterService } from './vault-writer.service';
 
 export interface GithubSyncFailure {
@@ -14,13 +15,6 @@ export interface GithubSyncResult {
   filesWritten: number;
   failures: GithubSyncFailure[];
 }
-
-interface ParsedRepo {
-  owner: string;
-  repo: string;
-}
-
-const GITHUB_URL_PATTERN = /github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?\/?$/;
 const MAX_FILES_PER_COMMIT = 25;
 
 interface CommitFileChange {
@@ -55,14 +49,6 @@ function formatCommitEntry(
   }
 
   return [header, ...fileLines].join('\n');
-}
-
-function parseRepoUrl(repoUrl: string): ParsedRepo {
-  const match = GITHUB_URL_PATTERN.exec(repoUrl.trim());
-  if (!match) {
-    throw new Error(`Could not parse owner/repo from repoUrl "${repoUrl}"`);
-  }
-  return { owner: match[1], repo: match[2] };
 }
 
 @Injectable()
