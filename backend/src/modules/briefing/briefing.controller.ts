@@ -5,6 +5,7 @@ import {
   HttpStatus,
   Logger,
   Post,
+  Query,
 } from '@nestjs/common';
 import { BriefingService } from './briefing.service';
 import { CandidateAggregatorService } from './domain/candidate-aggregator.service';
@@ -68,23 +69,27 @@ export class BriefingController {
   }
 
   @Get('live-narration')
-  async getLiveNarration(): Promise<{
+  async getLiveNarration(@Query('force') force?: string): Promise<{
     narration: string | null;
     degraded: boolean;
     degradedReason: string | null;
     generatedAt: Date;
   }> {
-    const now = new Date();
-    const cached =
-      await this.snapshotBlockCacheService.findSnapshotForCurrentBlock(now);
+    const bypassCache = force === 'true';
 
-    if (cached) {
-      return {
-        narration: cached.narration,
-        degraded: cached.degraded,
-        degradedReason: cached.degradedReason,
-        generatedAt: cached.generatedAt,
-      };
+    if (!bypassCache) {
+      const now = new Date();
+      const cached =
+        await this.snapshotBlockCacheService.findSnapshotForCurrentBlock(now);
+
+      if (cached) {
+        return {
+          narration: cached.narration,
+          degraded: cached.degraded,
+          degradedReason: cached.degradedReason,
+          generatedAt: cached.generatedAt,
+        };
+      }
     }
 
     const candidates = await this.candidateAggregator.getCandidates();

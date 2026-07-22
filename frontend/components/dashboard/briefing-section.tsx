@@ -56,15 +56,26 @@ async function loadLiveBriefingData(): Promise<LiveBriefingData> {
   return (await response.json()) as LiveBriefingData;
 }
 
-async function loadLiveNarrationData(): Promise<LiveNarrationResult> {
-  const response = await fetch("/briefing/live-narration");
+async function loadLiveNarrationData(
+  force?: boolean,
+): Promise<LiveNarrationResult> {
+  const url = force
+    ? "/briefing/live-narration?force=true"
+    : "/briefing/live-narration";
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to load narration (${response.status})`);
   }
   return (await response.json()) as LiveNarrationResult;
 }
 
-export function BriefingSection() {
+interface BriefingSectionProps {
+  onRegisterNarrationRefresh?: (refresh: (force?: boolean) => void) => void;
+}
+
+export function BriefingSection({
+  onRegisterNarrationRefresh,
+}: BriefingSectionProps = {}) {
   const [liveData, setLiveData] = useState<LiveBriefingData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
@@ -101,23 +112,26 @@ export function BriefingSection() {
     }
   }, []);
 
-  const runLiveNarrationFetch = useCallback(async (requestId: number) => {
-    try {
-      const result = await loadLiveNarrationData();
-      if (requestId !== narrationRequestId.current) return;
-      setNarration(result);
-      setNarrationError(null);
-    } catch (error) {
-      if (requestId !== narrationRequestId.current) return;
-      const message =
-        error instanceof Error ? error.message : "Couldn't load narration";
-      setNarrationError(message);
-    } finally {
-      if (requestId === narrationRequestId.current) {
-        setNarrationLoading(false);
+  const runLiveNarrationFetch = useCallback(
+    async (requestId: number, force?: boolean) => {
+      try {
+        const result = await loadLiveNarrationData(force);
+        if (requestId !== narrationRequestId.current) return;
+        setNarration(result);
+        setNarrationError(null);
+      } catch (error) {
+        if (requestId !== narrationRequestId.current) return;
+        const message =
+          error instanceof Error ? error.message : "Couldn't load narration";
+        setNarrationError(message);
+      } finally {
+        if (requestId === narrationRequestId.current) {
+          setNarrationLoading(false);
+        }
       }
-    }
-  }, []);
+    },
+    [],
+  );
 
   const fetchLiveData = useCallback(() => {
     const requestId = ++dataRequestId.current;
@@ -126,12 +140,15 @@ export function BriefingSection() {
     void runLiveDataFetch(requestId);
   }, [runLiveDataFetch]);
 
-  const fetchLiveNarration = useCallback(() => {
-    const requestId = ++narrationRequestId.current;
-    setNarrationLoading(true);
-    setNarrationError(null);
-    void runLiveNarrationFetch(requestId);
-  }, [runLiveNarrationFetch]);
+  const fetchLiveNarration = useCallback(
+    (force?: boolean) => {
+      const requestId = ++narrationRequestId.current;
+      setNarrationLoading(true);
+      setNarrationError(null);
+      void runLiveNarrationFetch(requestId, force);
+    },
+    [runLiveNarrationFetch],
+  );
 
   const handleRefresh = useCallback(() => {
     fetchLiveData();
@@ -162,6 +179,10 @@ export function BriefingSection() {
       setPushState("error");
     }
   }, []);
+
+  useEffect(() => {
+    onRegisterNarrationRefresh?.(fetchLiveNarration);
+  }, [fetchLiveNarration, onRegisterNarrationRefresh]);
 
   useEffect(() => {
     const dataId = ++dataRequestId.current;

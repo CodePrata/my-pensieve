@@ -1,3 +1,6 @@
+"use client";
+
+import { useCallback, useRef } from "react";
 import { BriefingSection } from "@/components/dashboard/briefing-section";
 import { CalendarSection } from "@/components/dashboard/calendar-section";
 import { KnowledgeSection } from "@/components/dashboard/knowledge-section";
@@ -5,6 +8,14 @@ import { ProjectsSection } from "@/components/dashboard/projects-section";
 import { StudySection } from "@/components/dashboard/study-section";
 
 export default function DashboardPage() {
+  const refreshNarrationRef = useRef<((force?: boolean) => void) | null>(
+    null,
+  );
+
+  const handleBriefingMutated = useCallback(() => {
+    refreshNarrationRef.current?.(true);
+  }, []);
+
   return (
     <div className="min-h-full" style={{ backgroundColor: "#1A7DA4" }}>
       <header className="border-b border-primary/80">
@@ -19,10 +30,14 @@ export default function DashboardPage() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-6 py-8">
-        <BriefingSection />
-        <StudySection />
+        <BriefingSection
+          onRegisterNarrationRefresh={(refresh) => {
+            refreshNarrationRef.current = refresh;
+          }}
+        />
+        <StudySection onBriefingMutated={handleBriefingMutated} />
         <div className="grid gap-6 lg:grid-cols-2">
-          <ProjectsSection />
+          <ProjectsSection onBriefingMutated={handleBriefingMutated} />
           <KnowledgeSection />
         </div>
         <CalendarSection />

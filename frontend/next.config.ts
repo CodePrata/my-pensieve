@@ -24,6 +24,10 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/projects`,
       },
       {
+        source: "/projects/:path*",
+        destination: `${backendUrl}/projects/:path*`,
+      },
+      {
         source: "/briefing/:path*",
         destination: `${backendUrl}/briefing/:path*`,
       },

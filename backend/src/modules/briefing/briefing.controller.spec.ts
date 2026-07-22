@@ -135,6 +135,60 @@ describe('BriefingController', () => {
     });
   });
 
+  describe('GET /briefing/live-narration', () => {
+    const generatedAt = new Date('2026-07-22T09:00:00.000Z');
+
+    it('returns cached snapshot when available and force is not set', async () => {
+      snapshotBlockCacheService.findSnapshotForCurrentBlock.mockResolvedValue({
+        narration: 'Cached briefing.',
+        degraded: false,
+        degradedReason: null,
+        generatedAt,
+      });
+
+      const result = await controller.getLiveNarration();
+
+      expect(result).toEqual({
+        narration: 'Cached briefing.',
+        degraded: false,
+        degradedReason: null,
+        generatedAt,
+      });
+      expect(candidateAggregator.getCandidates).not.toHaveBeenCalled();
+      expect(briefingService.generateFullBriefing).not.toHaveBeenCalled();
+    });
+
+    it('bypasses cache and regenerates when force=true', async () => {
+      snapshotBlockCacheService.findSnapshotForCurrentBlock.mockResolvedValue({
+        narration: 'Cached briefing.',
+        degraded: false,
+        degradedReason: null,
+        generatedAt,
+      });
+      candidateAggregator.getCandidates.mockResolvedValue([]);
+      briefingService.generateFullBriefing.mockResolvedValue({
+        narration: 'Fresh briefing.',
+        degraded: false,
+        degradedReason: null,
+        generatedAt,
+      });
+
+      const result = await controller.getLiveNarration('true');
+
+      expect(result).toEqual({
+        narration: 'Fresh briefing.',
+        degraded: false,
+        degradedReason: null,
+        generatedAt,
+      });
+      expect(
+        snapshotBlockCacheService.findSnapshotForCurrentBlock,
+      ).not.toHaveBeenCalled();
+      expect(candidateAggregator.getCandidates).toHaveBeenCalled();
+      expect(briefingService.generateFullBriefing).toHaveBeenCalled();
+    });
+  });
+
   describe('POST /briefing/push', () => {
     const fullBriefingPayload = {
       data: {
